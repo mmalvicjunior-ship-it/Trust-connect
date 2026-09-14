@@ -16,3 +16,6 @@ out/
 
 # logs
 *.log
+
+.vercel
+.env*
