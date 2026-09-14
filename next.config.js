@@ -7,6 +7,12 @@ const nextConfig = {
       { protocol: 'https', hostname: 'randomuser.me' },
     ],
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.cache = false;
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;

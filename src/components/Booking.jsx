@@ -23,7 +23,19 @@ export default function Booking() {
 
   useEffect(() => {
     api.getProviders()
-      .then((data) => setProviders(data.providers))
+      .then((data) => {
+        if (data.providers?.length) {
+          setProviders(data.providers);
+          return;
+        }
+
+        setProviders(PROVIDERS_DETAIL.map((p, i) => ({
+          _id: String(i + 1),
+          businessName: p.name,
+          specialty: p.specialty,
+          location: p.location,
+        })));
+      })
       .catch(() => {
         const seeded = PROVIDERS_DETAIL.map((p, i) => ({
           _id: String(i + 1),
@@ -163,7 +175,7 @@ export default function Booking() {
                 <option value="">Choose a Professional</option>
                 {providers.map((p, i) => (
                   <option key={String(p._id) || i} value={String(p._id)}>
-                    {p.businessName || p.name} — {p.specialty || p.trade} {(p.location ? `(${p.location})` : '')}
+                    {p.specialty || p.trade || 'Professional'} — {p.businessName || p.name} {(p.location ? `(${p.location})` : '')}
                   </option>
                 ))}
               </select>

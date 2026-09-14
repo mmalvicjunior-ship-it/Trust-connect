@@ -2,6 +2,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 
 export const metadata = {
+  metadataBase: new URL('http://localhost:3000'),
   title: 'Trust Connect — Find Trusted Professionals for Every Job',
   description: 'Trust Connect is a premium marketplace connecting homeowners, businesses, hotels, schools and organizations with verified, trusted service professionals.',
   authors: [{ name: 'Trust Connect' }],

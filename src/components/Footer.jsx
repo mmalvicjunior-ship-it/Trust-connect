@@ -33,14 +33,14 @@ export default function Footer() {
           <h4>For Clients</h4>
           <a href="#">How It Works</a>
           <a href="/booking">Book a Service</a>
-          <a href="/register">Client Login</a>
+          <a href="/signin">Client Login</a>
           <a href="/register">Create Account</a>
         </div>
         <div className="footer-col">
           <h4>Contact Us</h4>
-          <p><i className="fas fa-envelope"></i> info@trustconnect.com</p>
-          <p><i className="fas fa-phone"></i> +263 77 123 4567</p>
-          <p><i className="fas fa-map-marker-alt"></i> Harare, Zimbabwe</p>
+          <p><i className="fas fa-envelope"></i> mmalvicjunior@gmail.com</p>
+          <p><i className="fas fa-phone"></i> +263 780 375 311</p>
+          <p><i className="fas fa-map-marker-alt"></i> Vic-Falls, Zimbabwe</p>
           <a href="/contact" className="btn btn-accent btn-sm"><i className="fas fa-paper-plane"></i> Get In Touch</a>
         </div>
       </div>

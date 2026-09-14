@@ -56,7 +56,7 @@ export default function Navbar() {
               <button onClick={handleSignOut} className="nav-login" style={{ cursor: 'pointer' }}>Sign Out</button>
             </>
           ) : (
-            <Link href="/register" className="nav-login">Sign In</Link>
+            <Link href="/signin" className="nav-login">Sign In</Link>
           )}
           <Link href="/booking" className="btn btn-primary btn-sm">Book a Service</Link>
         </div>
