@@ -12,7 +12,7 @@ export default function SignIn() {
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login, googleLogin, user } = useAuth();
 
   useEffect(() => {
     const loadScript = (src) => new Promise((resolve) => {
@@ -33,6 +33,7 @@ export default function SignIn() {
       loadStylesheet('https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css');
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js');
       window.AOS.init({ duration: 700, once: true, offset: 60, easing: 'ease-out-cubic' });
+      await loadScript('https://accounts.google.com/gsi/client');
     })();
   }, []);
 
@@ -63,6 +64,35 @@ export default function SignIn() {
     }
   };
 
+  const handleGoogleSignIn = () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId || !window.google?.accounts?.id) {
+      setToast({ message: 'Google sign-in is not configured yet.', type: 'error' });
+      return;
+    }
+
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: async ({ credential }) => {
+        if (!credential) {
+          setToast({ message: 'Google sign-in was cancelled.', type: 'error' });
+          return;
+        }
+
+        setSubmitting(true);
+        try {
+          await googleLogin(credential);
+          router.push('/dashboard');
+        } catch (err) {
+          setToast({ message: err.message || 'Google sign-in failed. Please try again.', type: 'error' });
+        } finally {
+          setSubmitting(false);
+        }
+      },
+    });
+    window.google.accounts.id.prompt();
+  };
+
   return (
     <>
       <Navbar />
@@ -80,7 +110,7 @@ export default function SignIn() {
             </form>
             <div className="divider"><span>or</span></div>
             <div className="social-login">
-              <button className="social-btn google-btn" type="button"><i className="fab fa-google"></i> Continue with Google</button>
+              <button className="social-btn google-btn" type="button" onClick={handleGoogleSignIn} disabled={submitting}><i className="fab fa-google"></i> Continue with Google</button>
               <button className="social-btn facebook-btn" type="button"><i className="fab fa-facebook-f"></i> Continue with Facebook</button>
             </div>
             <p className="auth-switch">Don&apos;t have an account? <Link href="/register">Create one here</Link></p>
