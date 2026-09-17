@@ -111,7 +111,6 @@ export default function SignIn() {
             <div className="divider"><span>or</span></div>
             <div className="social-login">
               <button className="social-btn google-btn" type="button" onClick={handleGoogleSignIn} disabled={submitting}><i className="fab fa-google"></i> Continue with Google</button>
-              <button className="social-btn facebook-btn" type="button"><i className="fab fa-facebook-f"></i> Continue with Facebook</button>
             </div>
             <p className="auth-switch">Don&apos;t have an account? <Link href="/register">Create one here</Link></p>
           </div>
