@@ -46,7 +46,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
+    Promise.allSettled([
       api.getDashboard(),
       api.adminGetUsers(),
       api.adminGetProviders(),
@@ -60,17 +60,17 @@ export default function AdminDashboard({ user, onLogout }) {
       api.adminGetActivity(),
     ])
       .then(([dash, u, p, b, pay, v, rep, rev, svc, an, act]) => {
-        setOverview(dash);
-        setUsers(u.users || []);
-        setProviders(p.providers || []);
-        setBookings(b.bookings || []);
-        setPayments(pay);
-        setVerifications(v.verifications || []);
-        setReports(rep.reports || []);
-        setReviews(rev.reviews || []);
-        setServices(svc.services || []);
-        setAnalytics(an);
-        setActivity(act.activity || []);
+        if (dash.status === 'fulfilled') setOverview(dash.value);
+        if (u.status === 'fulfilled') setUsers(u.value?.users || []);
+        if (p.status === 'fulfilled') setProviders(p.value?.providers || []);
+        if (b.status === 'fulfilled') setBookings(b.value?.bookings || []);
+        if (pay.status === 'fulfilled') setPayments(pay.value || { payments: [], totalCollected: 0, totalVolume: 0, count: 0 });
+        if (v.status === 'fulfilled') setVerifications(v.value?.verifications || []);
+        if (rep.status === 'fulfilled') setReports(rep.value?.reports || []);
+        if (rev.status === 'fulfilled') setReviews(rev.value?.reviews || []);
+        if (svc.status === 'fulfilled') setServices(svc.value?.services || []);
+        if (an.status === 'fulfilled') setAnalytics(an.value);
+        if (act.status === 'fulfilled') setActivity(act.value?.activity || []);
       })
       .catch(() => {
         /* partial state kept */
@@ -399,14 +399,14 @@ export default function AdminDashboard({ user, onLogout }) {
   const renderAnalytics = () => {
     if (!analytics) return <Loader />;
     const maxStatus = Math.max(1, ...Object.values(analytics.bookingsByStatus || {}));
-    const maxSpecialty = Math.max(1, ...(analytics.providersBySpecialty || []).map((x) => x.count));
+    const maxSpecialty = Math.max(1, ...(analytics.providersBySpecialty || []).map((x) => x.count || 0));
     return (
       <div className="tc-panels">
         <section className="tc-card">
           <div className="tc-card-head"><h3><i className="fas fa-chart-column"></i> Analytics</h3></div>
           <div className="tc-stats">
-            <DashboardCard icon="fa-sack-dollar" label="Revenue" value={formatMoney(analytics.revenueTotal)} tone="green" />
-            <DashboardCard icon="fa-money-check-dollar" label="Volume" value={formatMoney(analytics.volumeTotal)} tone="blue" />
+            <DashboardCard icon="fa-sack-dollar" label="Revenue" value={formatMoney(analytics.revenueTotal || 0)} tone="green" />
+            <DashboardCard icon="fa-money-check-dollar" label="Volume" value={formatMoney(analytics.volumeTotal || 0)} tone="blue" />
             <DashboardCard icon="fa-users" label="By Role" value={(() => { const b = analytics.usersByRole || {}; return `${b.client || 0} client / ${b.provider || 0} provider`; })()} tone="navy" />
           </div>
           <div className="tc-grid-2">
@@ -416,7 +416,7 @@ export default function AdminDashboard({ user, onLogout }) {
                 <EmptyState icon="fa-chart-column" message="No data yet." />
               ) : (
                 <>
-                  {Object.entries(analytics.bookingsByStatus).map(([k, v]) => (
+                  {Object.entries(analytics.bookingsByStatus || {}).map(([k, v]) => (
                     <div key={k} className="tc-bar-row">
                       <span className="tc-bar-label">{k}</span>
                       <div className="tc-bar-track"><div className="tc-bar-fill" style={{ width: `${Math.max(6, (v / maxStatus) * 100)}%` }}></div></div>
@@ -436,13 +436,13 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
             <div className="tc-card-inner">
               <h4>Providers by Specialty</h4>
-              {analytics.providersBySpecialty.length === 0 ? (
+              {(analytics.providersBySpecialty || []).length === 0 ? (
                 <EmptyState icon="fa-user-tie" message="No providers yet." />
               ) : (
-                analytics.providersBySpecialty.map((p) => (
+                (analytics.providersBySpecialty || []).map((p) => (
                   <div key={p.specialty} className="tc-bar-row">
                     <span className="tc-bar-label">{p.specialty}</span>
-                    <div className="tc-bar-track"><div className="tc-bar-fill teal" style={{ width: `${Math.max(6, (p.count / maxSpecialty) * 100)}%` }}></div></div>
+                    <div className="tc-bar-track"><div className="tc-bar-fill teal" style={{ width: `${Math.max(6, ((p.count || 0) / maxSpecialty) * 100)}%` }}></div></div>
                     <span className="tc-bar-value">{p.count}</span>
                   </div>
                 ))

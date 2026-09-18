@@ -87,6 +87,8 @@ export const api = {
   adminGetBookings: () => request("/admin/bookings"),
   adminUpdateBookingStatus: (bookingId, status) =>
     request(`/admin/bookings/${bookingId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  adminSetBookingStatus: (bookingId, status) =>
+    request(`/admin/bookings/${bookingId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   adminGetPayments: () => request("/admin/payments"),
   adminGetReviews: () => request("/admin/reviews"),
   adminDeleteReview: (id) => request(`/admin/reviews/${id}`, { method: "DELETE" }),
@@ -101,4 +103,5 @@ export const api = {
   adminSetReport: (id, status) =>
     request(`/admin/reports/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   adminGetAnalytics: () => request("/admin/analytics"),
+  adminGetActivity: () => request("/admin/activity"),
 };
