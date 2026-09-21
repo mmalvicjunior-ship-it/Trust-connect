@@ -30,8 +30,8 @@ export function AuthProvider({ children }) {
     loadUser();
   }, [loadUser]);
 
-  const login = async (email, password) => {
-    const data = await api.login({ email, password });
+  const login = async (email, password, userType) => {
+    const data = await api.login({ email, password, userType });
     localStorage.setItem('tc_token', data.token);
     setUser(data.user);
     return data;

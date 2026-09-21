@@ -40,12 +40,14 @@ export default function AdminDashboard({ user, onLogout }) {
   const [analytics, setAnalytics] = useState(null);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
     setLoading(true);
+    setLoadError(false);
     Promise.allSettled([
       api.getDashboard(),
       api.adminGetUsers(),
@@ -71,6 +73,7 @@ export default function AdminDashboard({ user, onLogout }) {
         if (svc.status === 'fulfilled') setServices(svc.value?.services || []);
         if (an.status === 'fulfilled') setAnalytics(an.value);
         if (act.status === 'fulfilled') setActivity(act.value?.activity || []);
+        setLoadError([dash, u, p, b].every((r) => r.status === 'rejected'));
       })
       .catch(() => {
         /* partial state kept */
@@ -89,9 +92,40 @@ export default function AdminDashboard({ user, onLogout }) {
   };
 
   const renderOverview = (setActive) => {
+    if (loading) {
+      return (
+        <div className="tc-panels">
+          <Loader text="Loading admin dashboard..." />
+        </div>
+      );
+    }
+
     const s = overview?.stats || {};
+    const byRole = analytics?.usersByRole || {};
+    const byStatus = analytics?.bookingsByStatus || {};
+    const statusCounts = [
+      { label: 'Pending', value: byStatus.Pending ?? 0, tone: 'amber', icon: 'fa-clock' },
+      { label: 'Accepted', value: byStatus.Accepted ?? 0, tone: 'navy', icon: 'fa-circle-check' },
+      { label: 'In Progress', value: byStatus['In Progress'] ?? 0, tone: 'blue', icon: 'fa-spinner' },
+      { label: 'Completed', value: byStatus.Completed ?? 0, tone: 'green', icon: 'fa-check-double' },
+      { label: 'Cancelled', value: byStatus.Cancelled ?? 0, tone: 'red', icon: 'fa-ban' },
+    ];
+    const recentRegistrations = users.slice(0, 6);
+    const recentReviews = reviews.slice(0, 4);
+
     return (
       <div className="tc-panels">
+        {loadError && (
+          <div className="tc-banner tc-banner-error tc-banner-dismissible">
+            <i className="fas fa-triangle-exclamation"></i>
+            <div>
+              <strong>Could not load all admin data.</strong>
+              <span>Some sections may be incomplete. Check that the backend is reachable, then refresh.</span>
+            </div>
+            <button type="button" className="tc-link-btn" onClick={() => reload()}>Retry</button>
+          </div>
+        )}
+
         <section className="tc-banner tc-banner-admin">
           <div>
             <h2>Admin Console</h2>
@@ -102,13 +136,17 @@ export default function AdminDashboard({ user, onLogout }) {
 
         <div className="tc-stats">
           <DashboardCard icon="fa-users" label="Users" value={s.users ?? 0} tone="blue" onClick={() => setActive('users')} />
-          <DashboardCard icon="fa-user-tie" label="Providers" value={s.providers ?? 0} tone="teal" onClick={() => setActive('providers')} />
+          <DashboardCard icon="fa-user" label="Clients" value={byRole.client ?? 0} tone="teal" onClick={() => setActive('users')} />
+          <DashboardCard icon="fa-user-tie" label="Providers" value={s.providers ?? 0} tone="navy" onClick={() => setActive('providers')} />
           <DashboardCard icon="fa-calendar-check" label="Bookings" value={s.bookings ?? 0} tone="green" onClick={() => setActive('bookings')} />
           <DashboardCard icon="fa-sack-dollar" label="Revenue" value={formatMoney(s.revenue ?? 0)} tone="amber" onClick={() => setActive('payments')} />
         </div>
         <div className="tc-stats">
           <DashboardCard icon="fa-hourglass-half" label="Pending Verifications" value={s.pendingVerifications ?? 0} tone="navy" onClick={() => setActive('verifications')} />
           <DashboardCard icon="fa-flag" label="Open Reports" value={s.openReports ?? 0} tone="red" onClick={() => setActive('reports')} />
+          {statusCounts.map((c) => (
+            <DashboardCard key={c.label} icon={c.icon} label={`Bookings ${c.label}`} value={c.value} tone={c.tone} onClick={() => setActive('bookings')} />
+          ))}
         </div>
 
         <div className="tc-grid-2">
@@ -150,6 +188,52 @@ export default function AdminDashboard({ user, onLogout }) {
                       <span className="tc-muted">{b.customerName || 'Client'} → {b.providerName || 'Provider'} · {formatDate(b.createdAt)}</span>
                     </div>
                     <StatusBadge status={b.status} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <div className="tc-grid-2">
+          <section className="tc-card">
+            <div className="tc-card-head">
+              <h3><i className="fas fa-user-plus"></i> Recent Registrations</h3>
+              <button type="button" className="tc-link-btn" onClick={() => setActive('users')}>View all</button>
+            </div>
+            {recentRegistrations.length === 0 ? (
+              <EmptyState icon="fa-user-plus" message="No registrations yet." />
+            ) : (
+              <div className="tc-mini-list">
+                {recentRegistrations.map((u) => (
+                  <div key={String(u._id)} className="tc-mini-item tc-mini-row">
+                    <div>
+                      <strong>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email}</strong>
+                      <span className="tc-muted">{u.email} · {u.userType} · {formatDate(u.createdAt)}</span>
+                    </div>
+                    <StatusBadge status={u.userType === 'provider' ? 'Accepted' : u.userType === 'admin' ? 'Completed' : 'Pending'} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="tc-card">
+            <div className="tc-card-head">
+              <h3><i className="fas fa-star"></i> Recent Reviews</h3>
+              <button type="button" className="tc-link-btn" onClick={() => setActive('reviews')}>View all</button>
+            </div>
+            {recentReviews.length === 0 ? (
+              <EmptyState icon="fa-star" message="No reviews yet." />
+            ) : (
+              <div className="tc-mini-list">
+                {recentReviews.map((r) => (
+                  <div key={String(r._id)} className="tc-mini-item tc-mini-col">
+                    <div className="tc-mini-row">
+                      <RatingStars rating={r.rating} />
+                      <span className="tc-muted">{r.customerName || 'Client'} · {formatDate(r.createdAt)}</span>
+                    </div>
+                    <span className="tc-muted">{r.comment || 'No comment provided.'}</span>
                   </div>
                 ))}
               </div>
@@ -532,7 +616,7 @@ function AddServiceForm({ notify, onDone }) {
   );
 }
 
-const allStatuses = ['Pending', 'Accepted', 'Rejected', 'Confirmed', 'In Progress', 'Completed', 'Cancelled'];
+const allStatuses = ['Pending', 'Accepted', 'In Progress', 'Completed', 'Cancelled'];
 
 function UsersTable({ users, currentUserId, notify, onDone }) {
   const [roleFilter, setRoleFilter] = useState('');

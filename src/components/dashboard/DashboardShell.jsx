@@ -65,9 +65,10 @@ export default function DashboardShell({ user, roleLabel, nav, onLogout, childre
   };
 
   const fullName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Account';
+  const themeKey = String(roleLabel || 'dashboard').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
   return (
-    <div className="tc-shell">
+    <div className={`tc-shell tc-theme-${themeKey}`}>
       <aside className={`tc-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <Link href="/" className="nav-logo tc-logo" style={{ color: '#fff' }}>
           <img src="/images/logo.png" alt="Trust Connect" className="mark" width="34" height="34" />

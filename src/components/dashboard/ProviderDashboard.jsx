@@ -173,7 +173,7 @@ export default function ProviderDashboard({ user, onLogout }) {
             ) : (
               <div className="tc-list">
                 {(bookings.requests || []).slice(0, 3).map((b) => (
-                  <SimpleRequest key={String(b._id)} b={b} onAccept={() => setBookingStatus(b.bookingId, 'Accepted', notify)} onReject={() => setBookingStatus(b.bookingId, 'Rejected', notify)} />
+                  <SimpleRequest key={String(b._id)} b={b} onAccept={() => setBookingStatus(b.bookingId, 'Accepted', notify)} onDecline={() => setBookingStatus(b.bookingId, 'Cancelled', notify)} />
                 ))}
               </div>
             )}
@@ -260,8 +260,8 @@ export default function ProviderDashboard({ user, onLogout }) {
                     <button type="button" className="btn btn-success btn-sm" onClick={() => setBookingStatus(b.bookingId, 'Accepted', notify)}>
                       <i className="fas fa-check"></i> Accept
                     </button>
-                    <button type="button" className="btn btn-danger btn-sm" onClick={() => setBookingStatus(b.bookingId, 'Rejected', notify)}>
-                      <i className="fas fa-xmark"></i> Reject
+                    <button type="button" className="btn btn-danger btn-sm" onClick={() => setBookingStatus(b.bookingId, 'Cancelled', notify)}>
+                      <i className="fas fa-ban"></i> Decline
                     </button>
                   </div>
                 </div>
@@ -274,8 +274,7 @@ export default function ProviderDashboard({ user, onLogout }) {
   };
 
   const NEXT_JOB_ACTION = {
-    Accepted: { label: 'Confirm Booking', to: 'Confirmed', icon: 'fa-calendar-check' },
-    Confirmed: { label: 'Start Job', to: 'In Progress', icon: 'fa-play' },
+    Accepted: { label: 'Start Job', to: 'In Progress', icon: 'fa-play' },
     'In Progress': { label: 'Complete Job', to: 'Completed', icon: 'fa-flag-checkered' },
   };
 
@@ -466,7 +465,7 @@ export default function ProviderDashboard({ user, onLogout }) {
     const all = [...(bookings.requests || []), ...(bookings.current || []), ...(bookings.completed || [])];
     const byStatus = {};
     all.forEach((b) => { byStatus[b.status] = (byStatus[b.status] || 0) + 1; });
-    const accepted = (byStatus['Accepted'] || 0) + (byStatus['Confirmed'] || 0) + (byStatus['In Progress'] || 0) + (byStatus['Completed'] || 0);
+    const accepted = (byStatus['Accepted'] || 0) + (byStatus['In Progress'] || 0) + (byStatus['Completed'] || 0);
     const total = all.length;
     const completionRate = total > 0 ? Math.round(((byStatus['Completed'] || 0) / total) * 100) : 0;
     return (
@@ -565,7 +564,7 @@ function MiniJob({ b, onMessage }) {
   );
 }
 
-function SimpleRequest({ b, onAccept, onReject }) {
+function SimpleRequest({ b, onAccept, onDecline }) {
   return (
     <div className="tc-list-item">
       <div className="tc-list-head">
@@ -577,7 +576,7 @@ function SimpleRequest({ b, onAccept, onReject }) {
       <div className="tc-list-row"><span>Payout</span><strong>{formatMoney(b.providerAmount)}</strong></div>
       <div className="tc-card-actions">
         <button type="button" className="btn btn-success btn-sm" onClick={onAccept}><i className="fas fa-check"></i> Accept</button>
-        <button type="button" className="btn btn-danger btn-sm" onClick={onReject}><i className="fas fa-xmark"></i> Reject</button>
+        <button type="button" className="btn btn-danger btn-sm" onClick={onDecline}><i className="fas fa-ban"></i> Decline</button>
       </div>
     </div>
   );

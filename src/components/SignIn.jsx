@@ -6,11 +6,19 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Toast from '@/components/Toast';
+import PasswordField from '@/components/PasswordField';
 import { useAuth } from '@/context/AuthContext';
+
+const ROLES = [
+  { value: 'client', label: 'Client', icon: 'fa-user' },
+  { value: 'provider', label: 'Provider', icon: 'fa-toolbox' },
+  { value: 'admin', label: 'Admin', icon: 'fa-shield-halved' },
+];
 
 export default function SignIn() {
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [role, setRole] = useState('client');
   const router = useRouter();
   const { login, googleLogin, user } = useAuth();
 
@@ -39,7 +47,7 @@ export default function SignIn() {
 
   useEffect(() => {
     if (user) {
-      router.push('/dashboard');
+      router.push('/');
     }
   }, [user, router]);
 
@@ -56,9 +64,9 @@ export default function SignIn() {
 
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(email, password, role);
       setToast({ message: 'Signed in successfully. Redirecting...', type: 'success' });
-      setTimeout(() => router.push('/dashboard'), 1000);
+      setTimeout(() => router.push('/'), 1000);
     } catch (err) {
       setToast({ message: err.message || 'Sign in failed. Please try again.', type: 'error' });
     } finally {
@@ -84,7 +92,7 @@ export default function SignIn() {
         setSubmitting(true);
         try {
           await googleLogin(credential);
-          router.push('/dashboard');
+          router.push('/');
         } catch (err) {
           setToast({ message: err.message || 'Google sign-in failed. Please try again.', type: 'error' });
         } finally {
@@ -104,10 +112,28 @@ export default function SignIn() {
             <h2>Welcome Back</h2>
             <p>Sign in to your Trust Connect account</p>
             <form className="auth-form" id="signin-form" onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label><i className="fas fa-user-tag"></i> Sign in as</label>
+                <div className="role-segmented" role="radiogroup" aria-label="Account type">
+                  {ROLES.map((r) => (
+                    <button
+                      type="button"
+                      key={r.value}
+                      role="radio"
+                      aria-checked={role === r.value}
+                      className={`role-segment ${role === r.value ? 'active' : ''}`}
+                      onClick={() => setRole(r.value)}
+                    >
+                      <i className={`fas ${r.icon}`}></i>
+                      <span>{r.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="form-group"><label htmlFor="signin-email"><i className="fas fa-envelope"></i> Email Address</label><input type="email" id="signin-email" name="email" required placeholder="your@email.com" /></div>
-              <div className="form-group"><label htmlFor="signin-password"><i className="fas fa-lock"></i> Password</label><input type="password" id="signin-password" name="password" required placeholder="Enter your password" /></div>
+              <PasswordField id="signin-password" name="password" label="Password" required placeholder="Enter your password" />
               <button type="submit" className="btn-auth-primary" disabled={submitting}>
-                {submitting ? 'Signing In...' : 'Sign In'}
+                {submitting ? 'Signing In...' : `Sign In as ${ROLES.find((r) => r.value === role)?.label || 'Client'}`}
               </button>
             </form>
             <div className="divider"><span>or</span></div>

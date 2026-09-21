@@ -12,29 +12,31 @@ export default function Dashboard() {
   const { user, logout, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading) return;
+    if (!user) {
       router.push('/signin');
+      return;
     }
   }, [user, authLoading, router]);
 
-  if (authLoading || !user) {
+  if (authLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8fafc' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '12px' }}><i className="fas fa-spinner fa-spin" style={{ color: 'var(--primary, #0057D9)' }}></i></div>
-          <p>Loading your dashboard...</p>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <p>Loading...</p>
       </div>
     );
   }
 
-  const role = (user.userType || 'client').toLowerCase();
+  if (!user) {
+    return null;
+  }
 
+  const role = (user.userType || 'client').toLowerCase();
   if (role === 'admin') {
     return <AdminDashboard user={user} onLogout={logout} />;
   }
   if (role === 'provider') {
     return <ProviderDashboard user={user} onLogout={logout} />;
   }
-  return <ClientDashboard user={user} onLogout={logout} />;
+  return <ClientDashboard />;
 }
