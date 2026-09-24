@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 const ROLES = [
   { value: 'client', label: 'Client', icon: 'fa-user' },
   { value: 'provider', label: 'Provider', icon: 'fa-toolbox' },
+  { value: 'admin', label: 'Admin', icon: 'fa-shield-halved' },
 ];
 
 export default function SignIn() {

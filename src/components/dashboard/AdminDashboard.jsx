@@ -15,15 +15,14 @@ import { api } from '@/lib/api';
 
 const NAV = [
   { id: 'overview', label: 'Dashboard', icon: 'fa-gauge-high' },
-  { id: 'users', label: 'Clients', icon: 'fa-users' },
+  { id: 'users', label: 'Users', icon: 'fa-users' },
   { id: 'providers', label: 'Service Providers', icon: 'fa-user-tie' },
   { id: 'bookings', label: 'Bookings', icon: 'fa-calendar-check' },
-  { id: 'services', label: 'Services', icon: 'fa-list-check' },
-  { id: 'activity', label: 'Platform Activity', icon: 'fa-bolt' },
   { id: 'payments', label: 'Payments', icon: 'fa-credit-card' },
   { id: 'verifications', label: 'Verification Requests', icon: 'fa-shield-halved' },
   { id: 'reports', label: 'Reports & Disputes', icon: 'fa-flag' },
   { id: 'reviews', label: 'Reviews', icon: 'fa-star' },
+  { id: 'services', label: 'Services', icon: 'fa-list-check' },
   { id: 'analytics', label: 'Analytics', icon: 'fa-chart-column' },
   { id: 'settings', label: 'Settings', icon: 'fa-gear' },
 ];
@@ -154,24 +153,21 @@ export default function AdminDashboard({ user, onLogout }) {
           <section className="tc-card">
             <div className="tc-card-head">
               <h3><i className="fas fa-clock"></i> Recent Activity</h3>
-              <button type="button" className="tc-link-btn" onClick={() => setActive('activity')}>View all</button>
+              <button type="button" className="tc-link-btn" onClick={() => setActive('users')}>View</button>
             </div>
             {activity.length === 0 ? (
               <EmptyState icon="fa-clock-rotate-left" message="No activity yet." />
             ) : (
               <div className="tc-activity">
-                {(overview?.recentActivity || activity.slice(0, 8)).map((a) => {
-                  const ev = describeActivity(a);
-                  return (
-                    <div key={String(a._id)} className="tc-activity-item">
-                      <div className="tc-activity-dot"></div>
-                      <div>
-                        <strong>{ev.text}</strong>
-                        <span className="tc-activity-time">{ev.meta ? `${ev.meta} · ` : ''}{formatDate(a.createdAt)}</span>
-                      </div>
+                {(overview?.recentActivity || activity.slice(0, 8)).map((a) => (
+                  <div key={String(a._id)} className="tc-activity-item">
+                    <div className="tc-activity-dot"></div>
+                    <div>
+                      <strong>{a.label || a.type || 'Activity'}</strong>
+                      <span className="tc-activity-time">{a.details?.bookingId ? `Booking ${a.details.bookingId} · ` : ''}{formatDate(a.createdAt)}</span>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </section>
@@ -249,7 +245,7 @@ export default function AdminDashboard({ user, onLogout }) {
   };
 
   const renderUsers = (notify) => (
-    <UsersTable users={users} bookings={bookings} currentUserId={user.id} notify={notify} onDone={reload} />
+    <UsersTable users={users} currentUserId={user.id} notify={notify} onDone={reload} />
   );
 
   const renderProviders = (notify) => (
@@ -261,27 +257,14 @@ export default function AdminDashboard({ user, onLogout }) {
         ) : (
           <div className="tc-table-wrap">
             <table className="tc-table">
-              <thead><tr><th>Business</th><th>Specialty</th><th>Location</th><th>Rating</th><th>Bookings</th><th>Clients</th><th>Verification</th><th>Availability</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Business</th><th>Specialty</th><th>Location</th><th>Rating</th><th>Verification</th><th>Availability</th><th>Actions</th></tr></thead>
               <tbody>
-                {providers.map((p) => {
-                  const pBookings = bookings.filter((b) => b.providerId && String(b.providerId) === String(p._id));
-                  const activeJobs = pBookings.filter((b) => b.status === 'Accepted' || b.status === 'In Progress').length;
-                  const doneJobs = pBookings.filter((b) => b.status === 'Completed').length;
-                  const clientList = [...new Set(pBookings.map((b) => b.customerName).filter(Boolean))];
-                  return (
+                {providers.map((p) => (
                   <tr key={String(p._id)}>
                     <td><strong>{p.businessName}</strong></td>
                     <td>{p.specialty}</td>
                     <td>{p.location || '—'}</td>
                     <td><RatingStars rating={p.rating} small /></td>
-                    <td>
-                      <strong>{pBookings.length}</strong>
-                      <span className="tc-muted tc-cell-sub">AC {activeJobs} · Done {doneJobs}</span>
-                    </td>
-                    <td>
-                      <strong>{clientList.length}</strong>
-                      {clientList.length > 0 && <span className="tc-muted tc-cell-sub">{clientList.slice(0, 2).join(', ')}{clientList.length > 2 ? '…' : ''}</span>}
-                    </td>
                     <td>
                       <select
                         value={p.verificationStatus || 'Unverified'}
@@ -312,8 +295,7 @@ export default function AdminDashboard({ user, onLogout }) {
                       </button>
                     </td>
                   </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>
@@ -471,20 +453,13 @@ export default function AdminDashboard({ user, onLogout }) {
         <AddServiceForm notify={notify} onDone={reload} />
         <div className="tc-table-wrap" style={{ marginTop: '14px' }}>
           <table className="tc-table">
-            <thead><tr><th>Name</th><th>Icon</th><th>Description</th><th>Bookings</th><th>Active</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Icon</th><th>Description</th><th>Active</th><th>Actions</th></tr></thead>
             <tbody>
-              {services.map((s) => {
-                const serviceName = String(s.name || '').toLowerCase();
-                const booked = bookings.filter((b) => String(b.service || '').toLowerCase() === serviceName).length;
-                return (
+              {services.map((s) => (
                 <tr key={String(s._id)}>
                   <td><strong>{s.name}</strong></td>
                   <td><i className={`fas ${s.icon}`}></i></td>
                   <td>{s.desc || '—'}</td>
-                  <td>
-                    <strong>{booked}</strong>
-                    <span className="tc-muted tc-cell-sub">{booked > 0 ? (bookings.filter((b) => String(b.service || '').toLowerCase() === serviceName && (b.status === 'Accepted' || b.status === 'In Progress')).length) + ' active' : ''}</span>
-                  </td>
                   <td>{s.active ? <StatusBadge status="Completed" /> : <StatusBadge status="Rejected" />}</td>
                   <td>
                     <button type="button" className="tc-link-btn" onClick={() => save(() => api.adminUpdateService(s._id, { active: !s.active }), 'Service toggled.', notify)}>
@@ -496,9 +471,8 @@ export default function AdminDashboard({ user, onLogout }) {
                     </button>
                   </td>
                 </tr>
-                );
-              })}
-              {services.length === 0 && <tr><td colSpan="6">No services yet.</td></tr>}
+              ))}
+              {services.length === 0 && <tr><td colSpan="5">No services yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -575,32 +549,6 @@ export default function AdminDashboard({ user, onLogout }) {
     </div>
   );
 
-  const renderActivity = () => (
-    <div className="tc-panels">
-      <section className="tc-card">
-        <div className="tc-card-head"><h3><i className="fas fa-bolt"></i> Platform Activity</h3></div>
-        {activity.length === 0 ? (
-          <EmptyState icon="fa-clock-rotate-left" message="No activity recorded yet." />
-        ) : (
-          <div className="tc-activity">
-            {activity.map((a) => {
-              const ev = describeActivity(a);
-              return (
-                <div key={String(a._id)} className="tc-activity-item">
-                  <div className="tc-activity-dot"></div>
-                  <div>
-                    <strong>{ev.text}</strong>
-                    <span className="tc-activity-time">{ev.meta ? `${ev.meta} · ` : ''}{a.email ? `${a.email} · ` : ''}{formatDate(a.createdAt)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-    </div>
-  );
-
   return (
     <DashboardShell user={user} roleLabel="Admin" nav={NAV} onLogout={onLogout}>
       {({ active, setActive, notify }) => {
@@ -621,8 +569,6 @@ export default function AdminDashboard({ user, onLogout }) {
             return renderReviews(notify);
           case 'services':
             return renderServices(notify);
-          case 'activity':
-            return renderActivity();
           case 'analytics':
             return renderAnalytics();
           case 'settings':
@@ -672,68 +618,14 @@ function AddServiceForm({ notify, onDone }) {
 
 const allStatuses = ['Pending', 'Accepted', 'In Progress', 'Completed', 'Cancelled'];
 
-const ACTIVITY_VERBS = {
-  Accepted: 'accepted',
-  'In Progress': 'started',
-  Completed: 'completed',
-  Cancelled: 'cancelled',
-};
-
-function describeActivity(a) {
-  const d = a.details || {};
-  const name = a.name || d.customerName || d.providerName || '';
-  const present = (value) => (value && String(value).trim()) || '';
-  switch (a.type) {
-    case 'register':
-      return { text: `${present(name) || 'Someone'} created an account.` };
-    case 'login':
-      return { text: `${present(name) || 'Someone'} signed in.` };
-    case 'booking':
-      return {
-        text: `${present(d.customerName) || present(name) || 'A client'} booked ${present(d.service) || 'a service'}${present(d.providerName) ? ` from ${present(d.providerName)}` : ''}.`,
-        meta: present(d.bookingId),
-      };
-    case 'booking_status': {
-      const verb = ACTIVITY_VERBS[present(d.status)];
-      if (verb) {
-        if (String(a.userType || '').toLowerCase() === 'provider') {
-          return {
-            text: `${present(d.providerName) || present(name) || 'The provider'} ${verb} ${present(d.customerName) || 'the client'}'s booking${present(d.service) ? ` (${present(d.service)})` : ''}.`,
-            meta: present(d.bookingId),
-          };
-        }
-        if (String(a.userType || '').toLowerCase() === 'client') {
-          return {
-            text: `${present(d.customerName) || present(name) || 'The client'} ${verb} their booking${present(d.service) ? ` (${present(d.service)})` : ''}.`,
-            meta: present(d.bookingId),
-          };
-        }
-      }
-      return {
-        text: `Booking ${present(d.bookingId) || ''} was moved to "${present(d.status) || 'a new status'}".`.replace(/\s+/g, ' ').trim(),
-      };
-    }
-    case 'verification_submitted':
-      return { text: `${present(name) || 'A provider'} submitted a verification request.` };
-    case 'verification_reviewed':
-      return { text: `${present(name) || 'An admin'} updated a verification request.` };
-    default:
-      return { text: `${a.label || a.type || 'Activity'}${present(d.bookingId) ? ` · ${present(d.bookingId)}` : ''}.` };
-  }
-}
-
-function UsersTable({ users, bookings, currentUserId, notify, onDone }) {
+function UsersTable({ users, currentUserId, notify, onDone }) {
   const [roleFilter, setRoleFilter] = useState('');
   const [q, setQ] = useState('');
-  const [viewing, setViewing] = useState(null);
   const shown = users.filter(
     (u) =>
       (!roleFilter || u.userType === roleFilter) &&
       (!q || `${u.fullName || u.firstName || ''} ${u.lastName || ''} ${u.email}`.toLowerCase().includes(q.toLowerCase()))
   );
-
-  const userBookings = (u) =>
-    bookings.filter((b) => b.customerId && String(b.customerId) === String(u._id));
 
   const act = async (fn, message) => {
     try {
@@ -748,52 +640,9 @@ function UsersTable({ users, bookings, currentUserId, notify, onDone }) {
   return (
     <div className="tc-panels">
       <section className="tc-card">
-        <div className="tc-card-head"><h3><i className="fas fa-users"></i> Clients</h3></div>
-        {viewing && (() => {
-          const vb = userBookings(viewing);
-          const vCounts = allStatuses.map((s) => ({ status: s, n: vb.filter((b) => b.status === s).length })).filter((x) => x.n > 0);
-          const lastActivity = vb.length ? new Date(Math.max(...vb.map((b) => new Date(b.createdAt || b.updatedAt || 0).getTime()))) : null;
-          return (
-            <div className="tc-client-detail">
-              <div className="tc-client-detail-head">
-                <div>
-                  <h4>{viewing.fullName || `${viewing.firstName || ''} ${viewing.lastName || ''}`.trim() || viewing.email}</h4>
-                  <p className="tc-muted">{viewing.email}{viewing.phone ? ` · ${viewing.phone}` : ''} · Joined {formatDate(viewing.createdAt)} · {vb.length} booking{vb.length === 1 ? '' : 's'}</p>
-                </div>
-                <div className="tc-client-detail-actions">
-                  {vCounts.map((c) => (
-                    <span key={c.status} className="tc-client-count"><StatusBadge status={c.status} /><strong>{c.n}</strong></span>
-                  ))}
-                  <button type="button" className="tc-link-btn" onClick={() => setViewing(null)}>Close</button>
-                </div>
-              </div>
-              {lastActivity && <p className="tc-muted">Last activity: {formatDate(lastActivity)}</p>}
-              {vb.length === 0 ? (
-                <EmptyState icon="fa-calendar-xmark" message="This client has no bookings yet." />
-              ) : (
-                <div className="tc-table-wrap">
-                  <table className="tc-table">
-                    <thead><tr><th>Booking</th><th>Service</th><th>Provider</th><th>When</th><th>Amount</th><th>Status</th></tr></thead>
-                    <tbody>
-                      {vb.map((b) => (
-                        <tr key={String(b._id)}>
-                          <td>{b.bookingId}</td>
-                          <td>{b.service}</td>
-                          <td>{b.providerName || '—'}</td>
-                          <td>{formatDate(b.date)} {b.time}</td>
-                          <td>{formatMoney(b.amount)}</td>
-                          <td><StatusBadge status={b.status} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        <div className="tc-card-head"><h3><i className="fas fa-users"></i> Users</h3></div>
         <div className="tc-filters">
-          <input type="text" placeholder="Search clients..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <input type="text" placeholder="Search users..." value={q} onChange={(e) => setQ(e.target.value)} />
           <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
             <option value="">All roles</option>
             <option value="client">Client</option>
@@ -803,11 +652,9 @@ function UsersTable({ users, bookings, currentUserId, notify, onDone }) {
         </div>
         <div className="tc-table-wrap">
           <table className="tc-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Bookings</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {shown.map((u) => {
-                const ub = userBookings(u);
-                return (
+              {shown.map((u) => (
                 <tr key={String(u._id)}>
                   <td><strong>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—'}</strong></td>
                   <td>{u.email}</td>
@@ -822,14 +669,9 @@ function UsersTable({ users, bookings, currentUserId, notify, onDone }) {
                       <option value="admin">Admin</option>
                     </select>
                   </td>
-                  <td>
-                    <strong>{ub.length}</strong>
-                    {ub.length > 0 && <span className="tc-muted tc-cell-sub">{ub.filter((b) => b.status === 'Pending').length} pending</span>}
-                  </td>
+                  <td>{formatDate(u.createdAt)}</td>
                   <td>{u.active === false ? <StatusBadge status="Rejected" /> : <StatusBadge status="Completed" />}</td>
                   <td>
-                    <button type="button" className="tc-link-btn" onClick={() => setViewing(u)}>View</button>
-                    {' · '}
                     {String(u._id) !== String(currentUserId) && (
                       <button
                         type="button"
@@ -841,9 +683,8 @@ function UsersTable({ users, bookings, currentUserId, notify, onDone }) {
                     )}
                   </td>
                 </tr>
-                );
-              })}
-              {shown.length === 0 && <tr><td colSpan="6">No clients found.</td></tr>}
+              ))}
+              {shown.length === 0 && <tr><td colSpan="6">No users found.</td></tr>}
             </tbody>
           </table>
         </div>

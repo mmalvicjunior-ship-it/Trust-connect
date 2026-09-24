@@ -2882,51 +2882,6 @@ section {
   margin-top: 2px;
 }
 
-/* ----- admin inline cell sub-labels ----- */
-.tc-cell-sub {
-  display: block;
-  font-size: 11.5px;
-  margin-top: 2px;
-}
-
-/* ----- admin client detail panel ----- */
-.tc-client-detail {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-2);
-  padding: 16px;
-  margin-bottom: 18px;
-}
-
-.tc-client-detail-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.tc-client-detail-head h4 {
-  font-family: 'Manrope', sans-serif;
-  font-size: 16px;
-  color: var(--navy);
-  margin-bottom: 4px;
-}
-
-.tc-client-detail-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.tc-client-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
 /* ----- provider cards ----- */
 .tc-prov-grid {
   display: grid;
