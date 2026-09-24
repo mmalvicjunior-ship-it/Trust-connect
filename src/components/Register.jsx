@@ -68,7 +68,7 @@ export default function Register() {
     try {
       await register({ firstName, lastName, email, phone, password, userType });
       setToast({ message: `Welcome, ${firstName}! Your account has been created.`, type: 'success' });
-      setTimeout(() => router.push('/dashboard'), 1200);
+      setTimeout(() => router.push(userType === 'provider' ? '/provider/dashboard' : '/dashboard'), 1200);
     } catch (err) {
       setToast({ message: err.message || 'Registration failed. Please try again.', type: 'error' });
     } finally {

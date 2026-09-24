@@ -15,6 +15,13 @@ const ROLES = [
   { value: 'admin', label: 'Admin', icon: 'fa-shield-halved' },
 ];
 
+function dashboardFor(userType) {
+  const role = String(userType || '').toLowerCase();
+  if (role === 'admin') return '/admin';
+  if (role === 'provider') return '/provider/dashboard';
+  return '/dashboard';
+}
+
 export default function SignIn() {
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -47,7 +54,7 @@ export default function SignIn() {
 
   useEffect(() => {
     if (user) {
-      router.push('/');
+      router.replace(dashboardFor(user.userType));
     }
   }, [user, router]);
 
@@ -66,7 +73,7 @@ export default function SignIn() {
     try {
       await login(email, password, role);
       setToast({ message: 'Signed in successfully. Redirecting...', type: 'success' });
-      setTimeout(() => router.push('/'), 1000);
+      setTimeout(() => router.push(dashboardFor(role)), 1000);
     } catch (err) {
       setToast({ message: err.message || 'Sign in failed. Please try again.', type: 'error' });
     } finally {
@@ -91,8 +98,8 @@ export default function SignIn() {
 
         setSubmitting(true);
         try {
-          await googleLogin(credential);
-          router.push('/');
+          const data = await googleLogin(credential);
+          router.push(dashboardFor(data.user?.userType));
         } catch (err) {
           setToast({ message: err.message || 'Google sign-in failed. Please try again.', type: 'error' });
         } finally {

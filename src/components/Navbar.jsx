@@ -55,7 +55,7 @@ export default function Navbar() {
               {String(user.userType).toLowerCase() === 'admin' && (
                 <Link href="/admin" className="nav-login nav-admin"><i className="fas fa-shield-halved"></i> Admin</Link>
               )}
-              <Link href="/dashboard" className="nav-login"><i className="fas fa-user"></i> {user.firstName || 'My Account'}</Link>
+              <Link href={String(user.userType).toLowerCase() === 'provider' ? '/provider/dashboard' : '/dashboard'} className="nav-login"><i className="fas fa-user"></i> {user.firstName || 'My Account'}</Link>
               <button onClick={handleSignOut} className="nav-login" style={{ cursor: 'pointer' }}>Sign Out</button>
             </>
           ) : (

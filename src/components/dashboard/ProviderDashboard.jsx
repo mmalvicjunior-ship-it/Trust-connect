@@ -142,8 +142,18 @@ export default function ProviderDashboard({ user, onLogout }) {
         />
 
         <div className="tc-stats">
+          <DashboardCard icon="fa-users" label="Total Clients" value={s.totalClients ?? 0} tone="teal" onClick={() => setActive('jobs')} />
+          <DashboardCard icon="fa-book-open" label="Total Bookings" value={s.totalBookings ?? 0} tone="blue" onClick={() => setActive('jobs')} />
+          <DashboardCard icon="fa-envelope-open-text" label="Pending" value={s.pendingRequests ?? 0} tone="amber" onClick={() => setActive('requests')} />
+          <DashboardCard icon="fa-circle-check" label="Accepted" value={s.accepted ?? 0} tone="green" onClick={() => setActive('jobs')} />
+        </div>
+        <div className="tc-stats">
+          <DashboardCard icon="fa-spinner" label="In Progress" value={s.inProgress ?? 0} tone="navy" onClick={() => setActive('jobs')} />
+          <DashboardCard icon="fa-check-double" label="Completed" value={s.completed ?? 0} tone="green" onClick={() => setActive('jobs')} />
+          <DashboardCard icon="fa-ban" label="Cancelled / Rejected" value={(s.cancelled ?? 0) + (s.rejected ?? 0)} tone="red" onClick={() => setActive('jobs')} />
           <DashboardCard icon="fa-calendar-day" label="Today's Jobs" value={s.todayJobs ?? 0} tone="blue" onClick={() => setActive('jobs')} />
-          <DashboardCard icon="fa-envelope-open-text" label="Pending Requests" value={s.pendingRequests ?? 0} tone="amber" onClick={() => setActive('requests')} />
+        </div>
+        <div className="tc-stats">
           <DashboardCard icon="fa-money-bill-wave" label="Total Earnings" value={formatMoney(overview?.earnings?.totalEarnings || 0)} tone="green" onClick={() => setActive('earnings')} />
           <DashboardCard icon="fa-star" label="Avg. Rating" value={s.rating ? `${s.rating} / 5` : '—'} tone="navy" onClick={() => setActive('reviews')} />
         </div>
@@ -253,8 +263,9 @@ export default function ProviderDashboard({ user, onLogout }) {
                     <div className="tc-list-row"><span>Customer</span><strong>{b.customerName}</strong></div>
                     <div className="tc-list-row"><span>When</span><strong>{formatDate(b.date)} at {b.time}</strong></div>
                     <div className="tc-list-row"><span>Location</span><strong>{b.location}</strong></div>
-                    <div className="tc-list-row"><span>Payout</span><strong>{formatMoney(b.providerAmount)}</strong></div>
-                    {b.description && <div className="tc-list-row"><span>Notes</span><strong>{b.description}</strong></div>}
+                    <div className="tc-list-row"><span>Amount</span><strong>{formatMoney(b.amount)} <small>(you earn {formatMoney(b.providerAmount)})</small></strong></div>
+                    <div className="tc-list-row"><span>Notes</span><strong>{b.description || '—'}</strong></div>
+                    <div className="tc-list-row"><span>Requested</span><strong>{formatDate(b.createdAt)}</strong></div>
                   </div>
                   <div className="tc-card-actions">
                     <button type="button" className="btn btn-success btn-sm" onClick={() => setBookingStatus(b.bookingId, 'Accepted', notify)}>
@@ -303,7 +314,9 @@ export default function ProviderDashboard({ user, onLogout }) {
                       <div className="tc-list-row"><span>Customer</span><strong>{b.customerName}</strong></div>
                       <div className="tc-list-row"><span>When</span><strong>{formatDate(b.date)} at {b.time}</strong></div>
                       <div className="tc-list-row"><span>Location</span><strong>{b.location}</strong></div>
-                      <div className="tc-list-row"><span>Payout</span><strong>{formatMoney(b.providerAmount)}</strong></div>
+                      <div className="tc-list-row"><span>Price</span><strong>{formatMoney(b.amount)} <small>(you earn {formatMoney(b.providerAmount)})</small></strong></div>
+                      <div className="tc-list-row"><span>Notes</span><strong>{b.description || '—'}</strong></div>
+                      <div className="tc-list-row"><span>Requested</span><strong>{formatDate(b.createdAt)}</strong></div>
                     </div>
                     <div className="tc-card-actions">
                       {action && (
@@ -337,8 +350,12 @@ export default function ProviderDashboard({ user, onLogout }) {
                   <div className="tc-list-body">
                     <div className="tc-list-row"><span>Service</span><strong>{b.service}</strong></div>
                     <div className="tc-list-row"><span>Customer</span><strong>{b.customerName}</strong></div>
+                    <div className="tc-list-row"><span>When</span><strong>{formatDate(b.date)} at {b.time}</strong></div>
+                    <div className="tc-list-row"><span>Location</span><strong>{b.location}</strong></div>
+                    <div className="tc-list-row"><span>Amount</span><strong>{formatMoney(b.amount)} <small>(you earned {formatMoney(b.providerAmount)})</small></strong></div>
+                    <div className="tc-list-row"><span>Notes</span><strong>{b.description || '—'}</strong></div>
                     <div className="tc-list-row"><span>Completed</span><strong>{formatDate(b.completedAt || b.updatedAt)}</strong></div>
-                    <div className="tc-list-row"><span>Earned</span><strong>{formatMoney(b.providerAmount)}</strong></div>
+                    <div className="tc-list-row"><span>Requested</span><strong>{formatDate(b.createdAt)}</strong></div>
                   </div>
                 </div>
               ))}
