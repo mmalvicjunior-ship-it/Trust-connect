@@ -43,6 +43,7 @@ async function request(path, options = {}) {
 export const api = {
   register: (body) => request("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   login: (body) => request("/auth/login", { method: "POST", body: JSON.stringify(body) }),
+  logout: () => request("/auth/logout", { method: "POST" }),
   googleLogin: (credential) => request("/auth/google", { method: "POST", body: JSON.stringify({ credential }) }),
   me: () => request("/auth/me"),
 
@@ -103,5 +104,8 @@ export const api = {
   adminSetReport: (id, status) =>
     request(`/admin/reports/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   adminGetAnalytics: () => request("/admin/analytics"),
-  adminGetActivity: () => request("/admin/activity"),
+  adminGetActivity: (params = {}) => {
+    const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value));
+    return request(`/admin/activity${query.toString() ? `?${query.toString()}` : ''}`);
+  },
 };

@@ -22,6 +22,7 @@ const NAV = [
   { id: 'verifications', label: 'Verification Requests', icon: 'fa-shield-halved' },
   { id: 'reports', label: 'Reports & Disputes', icon: 'fa-flag' },
   { id: 'reviews', label: 'Reviews', icon: 'fa-star' },
+  { id: 'activity', label: 'Activity / Audit Log', icon: 'fa-clock-rotate-left' },
   { id: 'services', label: 'Services', icon: 'fa-list-check' },
   { id: 'analytics', label: 'Analytics', icon: 'fa-chart-column' },
   { id: 'settings', label: 'Settings', icon: 'fa-gear' },
@@ -153,7 +154,7 @@ export default function AdminDashboard({ user, onLogout }) {
           <section className="tc-card">
             <div className="tc-card-head">
               <h3><i className="fas fa-clock"></i> Recent Activity</h3>
-              <button type="button" className="tc-link-btn" onClick={() => setActive('users')}>View</button>
+              <button type="button" className="tc-link-btn" onClick={() => setActive('activity')}>View</button>
             </div>
             {activity.length === 0 ? (
               <EmptyState icon="fa-clock-rotate-left" message="No activity yet." />
@@ -549,6 +550,8 @@ export default function AdminDashboard({ user, onLogout }) {
     </div>
   );
 
+  const renderActivity = () => <ActivityLog activity={activity} />;
+
   return (
     <DashboardShell user={user} roleLabel="Admin" nav={NAV} onLogout={onLogout}>
       {({ active, setActive, notify }) => {
@@ -567,6 +570,8 @@ export default function AdminDashboard({ user, onLogout }) {
             return renderReports(notify);
           case 'reviews':
             return renderReviews(notify);
+          case 'activity':
+            return renderActivity();
           case 'services':
             return renderServices(notify);
           case 'analytics':
@@ -578,6 +583,75 @@ export default function AdminDashboard({ user, onLogout }) {
         }
       }}
     </DashboardShell>
+  );
+}
+
+function ActivityLog({ activity }) {
+  const [role, setRole] = useState('');
+  const [actionType, setActionType] = useState('all');
+  const [search, setSearch] = useState('');
+  const [date, setDate] = useState('');
+
+  const shown = activity.filter((item) => {
+    const itemRole = item.role || item.userType;
+    const text = `${item.userName || item.name || ''} ${item.userEmail || item.email || ''} ${item.label || ''} ${item.details?.bookingId || ''}`.toLowerCase();
+    const action = item.action || item.type || '';
+    const matchesAction = actionType === 'all'
+      || (actionType === 'bookings' && action.startsWith('booking_'))
+      || (actionType === 'auth' && /^user_(registered|login|logout)$/.test(action))
+      || (actionType === 'verifications' && action.includes('verification'))
+      || (actionType === 'reviews' && action.includes('review'));
+    return (!role || itemRole === role) && matchesAction && (!search || text.includes(search.toLowerCase()))
+      && (!date || new Date(item.createdAt).toISOString().slice(0, 10) === date);
+  });
+
+  const roleTone = { client: '#1D4ED8', provider: '#3730A3', admin: '#B45309' };
+  return (
+    <div className="tc-panels">
+      <section className="tc-card">
+        <div className="tc-card-head">
+          <h3><i className="fas fa-clock-rotate-left"></i> Activity / Audit Log</h3>
+          <span className="tc-muted">{shown.length} events</span>
+        </div>
+        <div className="tc-filters">
+          <select value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="">All roles</option>
+            <option value="client">Client</option>
+            <option value="provider">Service Provider</option>
+            <option value="admin">Admin</option>
+          </select>
+          <select value={actionType} onChange={(e) => setActionType(e.target.value)}>
+            <option value="all">All actions</option>
+            <option value="bookings">Bookings</option>
+            <option value="auth">Auth</option>
+            <option value="verifications">Verifications</option>
+            <option value="reviews">Reviews</option>
+          </select>
+          <input type="search" placeholder="Search name, email, booking..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Filter by date" />
+        </div>
+        {shown.length === 0 ? <EmptyState icon="fa-clock-rotate-left" message="No matching activity found." /> : (
+          <div className="tc-activity">
+            {shown.map((item) => {
+              const itemRole = item.role || item.userType || 'unknown';
+              const actor = item.userName || item.name || item.userEmail || item.email || 'System';
+              return (
+                <div key={String(item._id)} className="tc-activity-item">
+                  <div className="tc-activity-dot" style={{ background: roleTone[itemRole] || '#64748B' }}></div>
+                  <div>
+                    <strong>{item.label || item.action || item.type}</strong>
+                    <span className="tc-activity-time">
+                      <span style={{ color: roleTone[itemRole] || '#64748B', fontWeight: 700 }}>{itemRole}</span>
+                      {' · '}{actor}{item.details?.bookingId ? ` · Booking ${item.details.bookingId}` : ''}{' · '}{formatDate(item.createdAt)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 

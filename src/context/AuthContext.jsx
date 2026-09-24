@@ -51,7 +51,11 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch {
+    }
     localStorage.removeItem('tc_token');
     setUser(null);
   };
