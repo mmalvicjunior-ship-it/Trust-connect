@@ -22,7 +22,7 @@ export default function HomeFooter() {
           </div>
           <div className="foot-col"><h5>Company</h5><Link href="/about">About Us</Link><Link href="/about">Careers</Link><Link href="/about">Press</Link><Link href="/contact">Contact</Link></div>
           <div className="foot-col"><h5>Services</h5><Link href="/services">Electricians</Link><Link href="/services">Plumbers</Link><Link href="/services">Cleaners</Link><Link href="/services">All Services</Link></div>
-          <div className="foot-col"><h5>Providers</h5><Link href="/providers">Become a Provider</Link><Link href="/dashboard">Provider Dashboard</Link><Link href="/about">Help Center</Link></div>
+          <div className="foot-col"><h5>Providers</h5><Link href="/providers">Become a Provider</Link><Link href="/provider/dashboard">Provider Dashboard</Link><Link href="/about">Help Center</Link></div>
           <div className="foot-news">
             <h5>For Clients</h5>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

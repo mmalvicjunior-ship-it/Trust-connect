@@ -44,7 +44,9 @@ export default function Footer() {
           <Link href="/#how">How It Works</Link>
           <Link href="/booking">Book a Service</Link>
           {user ? (
-            <Link href="/dashboard">Client Dashboard</Link>
+            <Link href={user.userType === 'provider' ? '/provider/dashboard' : user.userType === 'admin' ? '/admin' : '/dashboard'}>
+              {user.userType === 'provider' ? 'Provider Dashboard' : user.userType === 'admin' ? 'Admin Dashboard' : 'Client Dashboard'}
+            </Link>
           ) : (
             <Link href="/signin">Client Login</Link>
           )}
