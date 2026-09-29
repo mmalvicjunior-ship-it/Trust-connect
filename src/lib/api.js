@@ -43,6 +43,7 @@ async function request(path, options = {}) {
 export const api = {
   register: (body) => request("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   login: (body) => request("/auth/login", { method: "POST", body: JSON.stringify(body) }),
+  submitContact: (body) => request("/contact", { method: "POST", body: JSON.stringify(body) }),
   logout: () => request("/auth/logout", { method: "POST" }),
   googleLogin: (credential) => request("/auth/google", { method: "POST", body: JSON.stringify({ credential }) }),
   me: () => request("/auth/me"),

@@ -2,7 +2,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 
 export const metadata = {
-  metadataBase: new URL('http://localhost:3000'),
+  metadataBase: new URL('https://trust-connect-ashy.vercel.app'),
   title: 'Trust Connect — Find Trusted Professionals for Every Job',
   description: 'Trust Connect is a premium marketplace connecting homeowners, businesses, hotels, schools and organizations with verified, trusted service professionals.',
   authors: [{ name: 'Trust Connect' }],
@@ -11,13 +11,14 @@ export const metadata = {
     type: 'website',
     title: 'Trust Connect — Find Trusted Professionals for Every Job',
     description: 'Trust Connect matches homeowners, businesses, hotels and schools with background-checked electricians, plumbers, cleaners and technicians.',
-    url: 'https://trustconnect.co.zw',
+    url: 'https://trust-connect-ashy.vercel.app',
     images: ['/images/logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Trust Connect — Find Trusted Professionals for Every Job',
     description: 'Trust Connect matches homeowners, businesses, hotels and schools with background-checked electricians, plumbers, cleaners and technicians.',
+    images: ['/images/logo.png'],
   },
   icons: { icon: '/images/logo.png' },
 };

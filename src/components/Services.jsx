@@ -48,7 +48,7 @@ export default function Services() {
                   <li key={j}><i className="fas fa-check"></i> {item}</li>
                 ))}
               </ul>
-              <Link href="/booking" className="btn btn-primary">{s.btnText}</Link>
+              <Link href={`/booking?service=${encodeURIComponent(s.title)}`} className="btn btn-primary">{s.btnText}</Link>
             </div>
           </div>
         ))}

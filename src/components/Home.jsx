@@ -95,7 +95,7 @@ export default function Home() {
             <p className="lead">From home repairs to cleaning, electrical work and more — connect with trusted local professionals and get the job done with confidence.</p>
             <div className="hero-ctas">
               <Link href="/services" className="btn btn-primary rippleize">Book a Service</Link>
-              <Link href="/providers" className="btn btn-ghost-light rippleize">Become a Provider</Link>
+              <Link href="/register" className="btn btn-ghost-light rippleize">Become a Provider</Link>
             </div>
             <div className="trust-badges">
               <span><i className="fa-solid fa-shield-check"></i> Verified Experts</span>
@@ -155,7 +155,7 @@ export default function Home() {
                 <div className="svc-photo"><img src={s.img} alt={s.title} /><div className="svc-icon"><i className={`fa-solid ${s.icon}`}></i></div></div>
                 <h4>{s.title}</h4>
                 <p>{s.desc}</p>
-                <a href="#" className="svc-link">Learn More <i className="fa-solid fa-arrow-right"></i></a>
+                <Link href={`/booking?service=${encodeURIComponent(s.title)}`} className="svc-link">Learn More <i className="fa-solid fa-arrow-right"></i></Link>
               </div>
             ))}
           </div>
@@ -283,8 +283,8 @@ export default function Home() {
               <div className="app-feat"><i className="fa-solid fa-lock"></i><div><strong>Secure Payments</strong><span>Pay in-app, released on completion</span></div></div>
             </div>
             <div className="store-btns">
-              <a href="#" className="store-btn"><i className="fa-brands fa-apple"></i><div><span className="l1">Download on the</span><span className="l2">App Store</span></div></a>
-              <a href="#" className="store-btn"><i className="fa-brands fa-google-play"></i><div><span className="l1">Get it on</span><span className="l2">Google Play</span></div></a>
+              <a className="store-btn" aria-disabled="true" title="Coming soon"><i className="fa-brands fa-apple"></i><div><span className="l1">Coming soon</span><span className="l2">App Store</span></div></a>
+              <a className="store-btn" aria-disabled="true" title="Coming soon"><i className="fa-brands fa-google-play"></i><div><span className="l1">Coming soon</span><span className="l2">Google Play</span></div></a>
             </div>
           </div>
           <div data-aos="fade-left">
@@ -308,7 +308,7 @@ export default function Home() {
           <p data-aos="fade-up" data-aos-delay="80">Join thousands of homeowners and organizations who trust verified pros for every job, big or small.</p>
           <div className="hero-ctas" data-aos="fade-up" data-aos-delay="160">
             <Link href="/services" className="btn btn-white rippleize">Book Now</Link>
-            <Link href="/providers" className="btn btn-ghost-light rippleize">Become a Provider</Link>
+            <Link href="/register" className="btn btn-ghost-light rippleize">Become a Provider</Link>
           </div>
         </div>
       </section>

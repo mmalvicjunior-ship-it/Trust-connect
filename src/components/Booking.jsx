@@ -22,6 +22,13 @@ export default function Booking() {
   const { user } = useAuth();
 
   useEffect(() => {
+    const requestedService = new URLSearchParams(window.location.search).get('service');
+    if (requestedService && SERVICES_DETAIL.some((service) => service.title === requestedService)) {
+      setSelectedService(requestedService);
+    }
+  }, []);
+
+  useEffect(() => {
     api.getProviders()
       .then((data) => {
         if (data.providers?.length) {

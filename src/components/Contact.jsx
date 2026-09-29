@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Toast from '@/components/Toast';
+import { api } from '@/lib/api';
 
 export default function Contact() {
   const [toast, setToast] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const loadScript = (src) => new Promise((resolve) => {
@@ -30,10 +32,27 @@ export default function Contact() {
     })();
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setToast({ message: 'Your message has been sent. We will get back to you soon.', type: 'success' });
-    e.target.reset();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const payload = {
+      name: formData.get('name').trim(),
+      email: formData.get('email').trim(),
+      subject: formData.get('subject').trim(),
+      message: formData.get('message').trim(),
+    };
+
+    setSubmitting(true);
+    try {
+      await api.submitContact(payload);
+      setToast({ message: 'Your message has been sent. We will get back to you soon.', type: 'success' });
+      form.reset();
+    } catch (err) {
+      setToast({ message: err.message || 'Unable to send your message. Please try again.', type: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -55,22 +74,22 @@ export default function Contact() {
             <div className="contact-socials">
               <h4>Follow Us</h4>
               <div className="footer-socials">
-                <a href="#"><i className="fab fa-facebook-f"></i></a>
-                <a href="#"><i className="fab fa-linkedin-in"></i></a>
-                <a href="#"><i className="fab fa-instagram"></i></a>
-                <a href="#"><i className="fab fa-tiktok"></i></a>
-                <a href="#"><i className="fab fa-youtube"></i></a>
+                <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="Facebook, coming soon"><i className="fab fa-facebook-f"></i></a>
+                <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="LinkedIn, coming soon"><i className="fab fa-linkedin-in"></i></a>
+                <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="Instagram, coming soon"><i className="fab fa-instagram"></i></a>
+                <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="TikTok, coming soon"><i className="fab fa-tiktok"></i></a>
+                <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="YouTube, coming soon"><i className="fab fa-youtube"></i></a>
               </div>
             </div>
           </div>
           <div className="contact-form-card" data-aos="fade-left">
             <h2><i className="fas fa-paper-plane"></i> Send Us a Message</h2>
             <form id="contact-form" onSubmit={handleSubmit}>
-              <div className="form-group"><label>Your Name</label><input type="text" placeholder="Enter your name" required /></div>
-              <div className="form-group"><label>Email Address</label><input type="email" placeholder="example@email.com" required /></div>
-              <div className="form-group"><label>Subject</label><input type="text" placeholder="What is this about?" required /></div>
-              <div className="form-group"><label>Message</label><textarea rows="5" placeholder="Tell us how we can help..." required></textarea></div>
-              <button type="submit" className="btn btn-primary btn-lg submit-btn"><i className="fas fa-paper-plane"></i> Send Message</button>
+              <div className="form-group"><label>Your Name</label><input type="text" name="name" placeholder="Enter your name" required /></div>
+              <div className="form-group"><label>Email Address</label><input type="email" name="email" placeholder="example@email.com" required /></div>
+              <div className="form-group"><label>Subject</label><input type="text" name="subject" placeholder="What is this about?" required /></div>
+              <div className="form-group"><label>Message</label><textarea name="message" rows="5" placeholder="Tell us how we can help..." required></textarea></div>
+              <button type="submit" className="btn btn-primary btn-lg submit-btn" disabled={submitting}><i className="fas fa-paper-plane"></i> {submitting ? 'Sending...' : 'Send Message'}</button>
             </form>
           </div>
         </div>

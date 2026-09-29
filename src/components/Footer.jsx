@@ -13,11 +13,11 @@ export default function Footer() {
           <h2>Trust <span>Connect</span></h2>
           <p>Connecting you with trusted service providers across Zimbabwe.</p>
           <div className="footer-socials">
-            <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
-            <a href="#" aria-label="LinkedIn"><i className="fab fa-linkedin-in"></i></a>
-            <a href="#" aria-label="Instagram"><i className="fab fa-instagram"></i></a>
-            <a href="#" aria-label="TikTok"><i className="fab fa-tiktok"></i></a>
-            <a href="#" aria-label="YouTube"><i className="fab fa-youtube"></i></a>
+            <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="Facebook, coming soon"><i className="fab fa-facebook-f"></i></a>
+            <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="LinkedIn, coming soon"><i className="fab fa-linkedin-in"></i></a>
+            <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="Instagram, coming soon"><i className="fab fa-instagram"></i></a>
+            <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="TikTok, coming soon"><i className="fab fa-tiktok"></i></a>
+            <a aria-disabled="true" tabIndex="0" title="Coming soon" aria-label="YouTube, coming soon"><i className="fab fa-youtube"></i></a>
           </div>
         </div>
 
@@ -33,10 +33,10 @@ export default function Footer() {
 
         <div className="footer-col">
           <h4>Resources</h4>
-          <Link href="/about">Help Center</Link>
-          <Link href="/about">FAQ</Link>
-          <Link href="/about">Privacy Policy</Link>
-          <Link href="/about">Terms of Service</Link>
+          <Link href="/faq#help-center">Help Center</Link>
+          <Link href="/faq">FAQ</Link>
+          <Link href="/privacy">Privacy Policy</Link>
+          <Link href="/terms">Terms of Service</Link>
         </div>
 
         <div className="footer-col">
@@ -55,9 +55,9 @@ export default function Footer() {
 
         <div className="footer-col">
           <h4>Contact Us</h4>
-          <p><i className="fas fa-envelope"></i> mmalvicjunior@gmail.com</p>
-          <p><i className="fas fa-phone"></i> +263 780 375 311</p>
-          <p><i className="fas fa-map-marker-alt"></i> Vic-Falls, Zimbabwe</p>
+          <p><i className="fas fa-envelope"></i> info@trustconnect.com</p>
+          <p><i className="fas fa-phone"></i> +263 77 123 4567</p>
+          <p><i className="fas fa-map-marker-alt"></i> 123 chinotimba Rawu, Victoria Falls, Zimbabwe</p>
           <Link href="/contact" className="btn btn-accent btn-sm"><i className="fas fa-paper-plane"></i> Get In Touch</Link>
         </div>
       </div>

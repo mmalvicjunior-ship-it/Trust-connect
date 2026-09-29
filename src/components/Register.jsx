@@ -117,7 +117,7 @@ export default function Register() {
                 <div className="form-group"><label htmlFor="phone">Phone Number</label><input type="tel" id="phone" name="phone" placeholder="+263 77 123 4567" /></div>
                 <PasswordField id="reg-password" name="password" label="Password" required placeholder="Create a strong password" minLength="6" withIcon={false} />
                 <PasswordField id="confirm-password" name="confirmPassword" label="Confirm Password" required placeholder="Re-enter password" minLength="6" withIcon={false} />
-                <div className="form-checkbox"><input type="checkbox" id="agree" name="agree" required /><label htmlFor="agree">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label></div>
+                <div className="form-checkbox"><input type="checkbox" id="agree" name="agree" required /><label htmlFor="agree">I agree to the <Link href="/terms">Terms of Service</Link> and <Link href="/privacy">Privacy Policy</Link></label></div>
                 <button type="submit" className="btn-auth-primary" disabled={submitting}>
                   {submitting ? 'Creating Account...' : role === 'provider' ? 'Create Service Provider Account' : 'Create Account'}
                 </button>

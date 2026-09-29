@@ -41,9 +41,9 @@ export default function About() {
             <p>Trust Connect is Zimbabwe&apos;s leading platform for connecting customers with verified and trusted service providers. We understand how difficult it can be to find reliable professionals, so we have built a platform that makes it easy.</p>
             <p>Our mission is to provide a seamless, secure, and transparent way for you to find the best service providers for your needs.</p>
             <div className="about-stats">
-              <div className="about-stat" data-aos="fade-up" data-aos-delay="80"><h3>500+</h3><p>Verified Providers</p></div>
-              <div className="about-stat" data-aos="fade-up" data-aos-delay="160"><h3>2,000+</h3><p>Happy Customers</p></div>
-              <div className="about-stat" data-aos="fade-up" data-aos-delay="240"><h3>4.8</h3><p>Average Rating</p></div>
+              <div className="about-stat" data-aos="fade-up" data-aos-delay="80"><h3>3,500+</h3><p>Verified Providers</p></div>
+              <div className="about-stat" data-aos="fade-up" data-aos-delay="160"><h3>10,000+</h3><p>Happy Customers</p></div>
+              <div className="about-stat" data-aos="fade-up" data-aos-delay="240"><h3>4.9/5</h3><p>Average Rating</p></div>
             </div>
           </div>
           <div className="about-image" data-aos="fade-left" data-aos-delay="150">
