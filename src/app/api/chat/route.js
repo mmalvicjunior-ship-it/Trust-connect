@@ -59,7 +59,10 @@ const classifyProviderFailure = (provider, status, errorCode, message) => {
   if (provider === 'openrouter' && errorCode === 'OPENROUTER_FREE_TIER_DAILY') return 'openrouter_free_tier_daily';
   if (errorCode === 'EMPTY_RESPONSE') return 'empty_response';
   if (errorCode === 'RESOURCE_EXHAUSTED') return 'quota_or_resource_exhausted';
+  if (status === 401) return 'authentication_or_permission_rejected';
+  if (status === 404 || /not found|unknown model/i.test(String(message || '').toLowerCase())) return 'model_or_endpoint_not_found';
   if (status === 429 || errorCode === 'RATE_LIMIT_EXCEEDED') return 'rate_limit_exceeded';
+  if (status === 503 || status === 502 || status === 504) return 'provider_at_capacity';
   return classifyProviderMessage(message);
 };
 
@@ -279,12 +282,29 @@ export async function POST(req) {
       } else {
         promptParts.push({ text: `User asks: ${question}\nAnswer clearly.` });
       }
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
-        body: JSON.stringify({ contents: [{ role: 'user', parts: promptParts }], generationConfig: { temperature: 0.7, maxOutputTokens: 1024 } }),
-        signal: AbortSignal.timeout(parseInt(process.env.GEMINI_TIMEOUT_MS || '90000', 10)),
-      });
+      let retryCount = 0;
+      const maxRetries = 1; // strict limit: one retry for temporary failures
+      let geminiRes = null;
+      let retryDueToTemp = false;
+      while (retryCount <= maxRetries) {
+        geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: promptParts }], generationConfig: { temperature: 0.7, maxOutputTokens: 1024 } }),
+          signal: AbortSignal.timeout(parseInt(process.env.GEMINI_TIMEOUT_MS || '90000', 10)),
+        });
+        if (geminiRes.ok) break;
+        const isTemporary = [503, 502, 504, 500].includes(geminiRes.status);
+        if (isTemporary && retryCount < maxRetries) {
+          retryCount += 1;
+          retryDueToTemp = true;
+          logProviderOutcome('gemini', 'retry', { reason: 'temporary_failure', retryAttempt: retryCount });
+          await new Promise((r) => setTimeout(r, 2000));
+          continue;
+        }
+        break;
+      }
+
       if (geminiRes.ok) {
         const gemData = await geminiRes.json();
         const candidate = gemData.candidates?.[0];
@@ -314,7 +334,7 @@ export async function POST(req) {
           reason: geminiRes.status === 429 ? 'rate_limited' : 'http_error',
           ...(retryAfterSeconds === null ? {} : { retryAfterSeconds }),
         });
-        logProviderFailure({ provider: 'gemini', response: geminiRes, errorBody, retryAfterSeconds });
+        logProviderFailure({ provider: 'gemini', response: geminiRes, errorBody, retryAfterSeconds, retryDueToTemp: retryDueToTemp || null });
         logEvent({ provider: 'gemini', eventType: 'http_failure', status: geminiRes.status, errorCategory: classifyProviderFailure('gemini', geminiRes.status, sanitizeDiagnosticCode(errorBody?.error?.code || errorBody?.code || null), errorBody?.error?.message || ''), correlationId, durationMs: null, fallbackAttempted: false });
       }
     } catch (e) {
