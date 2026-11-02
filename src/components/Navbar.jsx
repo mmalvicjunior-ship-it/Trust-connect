@@ -61,6 +61,14 @@ export default function Navbar() {
           ) : (
             <Link href="/signin" className="nav-login">Sign In</Link>
           )}
+          <button
+            className="nav-login"
+            onClick={() => window.dispatchEvent(new Event('open-ai-chat'))}
+            style={{ cursor: 'pointer' }}
+            aria-label="Open AI Chat"
+          >
+            <i className="fa-solid fa-robot" /> AI Search
+          </button>
           <Link href="/booking" className="btn btn-primary btn-sm">Book a Service</Link>
         </div>
         <button className="nav-toggle" aria-label="Menu" onClick={() => setMobileOpen(!mobileOpen)}>

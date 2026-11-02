@@ -1,5 +1,6 @@
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import ChatPanel from '@/components/ChatPanel';
 
 export const metadata = {
   metadataBase: new URL('https://trust-connect-ashy.vercel.app'),
@@ -38,6 +39,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <ChatPanel />
       </body>
     </html>
   );
