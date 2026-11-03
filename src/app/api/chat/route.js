@@ -225,8 +225,17 @@ export async function POST(req) {
   const serviceOrTradeTerms = /\b(plumber|electrician|cleaner|painter|carpenter|gardener|pest|security|hvac|mechanic|car repair|appliance|tiling|masonry)\b/i;
   const generalServiceOrPlatformTerms = /\b(services?|categories|category|trades?|platform|what can (you|i) (do|find|help)|how (can|does) (it|this|trust connect) work|about trust connect|help me do|available services)\b/i;
 
-  const directFAQTerms = /\b(what services?|what can I find|how do I book|how does this work|about trust connect|available services?|help me do|what can you do)\b/i;
+  const directFAQTerms = /\b(what services?|what can I find|how does this work|about trust connect|available services?|help me do|what can you do)\b/i;
+  const bookingQuery = /\b(how do I book|how can I book|how can I make a booking|how do I request a service|book a (professional|plumber|cleaner|electrician))\b/i;
   const directTradeQuery = /\b(find|look for|search for|need)\b/i;
+
+  // --- Booking FAQ (priority over generic service FAQ) ---
+  if (bookingQuery.test(lowerQ)) {
+    return NextResponse.json({
+      answer: "To book a professional on Trust Connect:\n\n1. Sign in to your account (or create one).\n2. Go to the Booking page and select a verified professional from the provider list.\n3. Choose the service category (for example: Plumber, Electrician, Cleaner).\n4. Enter the date, time, location, job description and estimated amount.\n5. Submit the form.\n\nAfter submitting, your booking receives a Booking ID and is set to Status: Pending. It is not automatically confirmed — confirmation depends on the provider's response through the platform.",
+      sources: [], provider: 'local'
+    }, { status: 200 });
+  }
 
   // --- Instant local responses for direct FAQs and simple service queries ---
   const isDirectFAQ = directFAQTerms.test(lowerQ);

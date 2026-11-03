@@ -68,13 +68,23 @@ async function run() {
   assert(b2.answer && b2.answer.includes('service categories'), 'service FAQ content');
   assert(mock.calls().filter(c => c.url.includes('openai') || c.url.includes('gemini') || c.url.includes('openrouter')).length === 0, 'service FAQ zero AI calls');
 
-  // 3 Booking FAQ local, zero AI calls
+  // 3 Booking FAQs return instructions locally, without AI calls
   mock.reset();
   const r3 = await POST(new Request('http://t/api/chat', { method: 'POST', body: JSON.stringify({ question: 'How do I book a professional?' }) }));
   const b3 = await r3.json();
   assert(b3.provider === 'local', 'booking FAQ local');
-  assert(b3.answer && b3.answer.includes('verified'), 'booking FAQ content');
+  assert(r3.status === 200, 'booking FAQ status 200');
+  assert(b3.answer && b3.answer.includes('To book a professional') && b3.answer.includes('Booking page'), 'booking FAQ instructions');
+  assert(!b3.answer.includes('Available service categories include:'), 'booking FAQ is not service FAQ');
   assert(mock.calls().filter(c => c.url.includes('openai') || c.url.includes('gemini') || c.url.includes('openrouter')).length === 0, 'booking FAQ zero AI calls');
+
+  mock.reset();
+  const r3b = await POST(new Request('http://t/api/chat', { method: 'POST', body: JSON.stringify({ question: 'How can I book a plumber?' }) }));
+  const b3b = await r3b.json();
+  assert(r3b.status === 200 && b3b.provider === 'local', 'trade booking FAQ local');
+  assert(b3b.answer && b3b.answer.includes('To book a professional') && b3b.answer.includes('Plumber'), 'trade booking FAQ instructions');
+  assert(!b3b.answer.includes('Available service categories include:'), 'trade booking FAQ is not service FAQ');
+  assert(mock.calls().filter(c => c.url.includes('openai') || c.url.includes('gemini') || c.url.includes('openrouter')).length === 0, 'trade booking FAQ zero AI calls');
 
   // 4 Complex explanation -> reaches OpenAI (not intercepted by quick-return)
   mock.reset();
