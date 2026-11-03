@@ -257,14 +257,89 @@ export async function POST(req) {
     }
   }
 
-  // --- Gemini (primary) ---
-  const geminiKey = process.env.GEMINI_API_KEY;
-  let geminiUsed = false;
   let finalAnswer = '';
   let finalSources = tavilySources;
+
+  // --- OpenAI (primary) ---
+  const openaiKey = process.env.OPENAI_API_KEY;
+  let openaiUsed = false;
+  const openaiCooldownSeconds = openaiKey ? getProviderCooldownSeconds('openai') : 0;
+  const openaiModel = (process.env.OPENAI_MODEL || 'gpt-4o-mini').trim();
+  if (openaiKey && openaiCooldownSeconds === 0 && !finalAnswer) {
+    logProviderOutcome('openai', 'attempted');
+    logEvent({ provider: 'openai', eventType: 'attempt_started', correlationId });
+    try {
+      let retryCount = 0;
+      const maxRetries = 1;
+      let openaiRes = null;
+      let retryDueToTemp = false;
+      while (retryCount <= maxRetries) {
+        openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
+          body: JSON.stringify({
+            model: openaiModel,
+            messages: [{ role: 'user', content: `${TC_DOMAIN}\n\nUser asks: ${question}` }],
+            max_tokens: 1024,
+            temperature: 0.7,
+          }),
+          signal: AbortSignal.timeout(parseInt(process.env.OPENAI_TIMEOUT_MS || '30000', 10)),
+        });
+        if (openaiRes.ok) break;
+        const isTemporary = [503, 502, 504, 500].includes(openaiRes.status);
+        if (isTemporary && retryCount < maxRetries) {
+          retryCount += 1;
+          retryDueToTemp = true;
+          logProviderOutcome('openai', 'retry', { reason: 'temporary_failure', retryAttempt: retryCount });
+          await new Promise((r) => setTimeout(r, 2000));
+          continue;
+        }
+        break;
+      }
+      if (openaiRes.ok) {
+        const data = await openaiRes.json();
+        const msg = data.choices?.[0]?.message?.content || '';
+        const answerText = msg.trim();
+        if (answerText) {
+          finalAnswer = answerText;
+          openaiUsed = true;
+          logProviderOutcome('openai', 'succeeded');
+          logEvent({ provider: 'openai', eventType: 'success', status: openaiRes.status, correlationId, durationMs: null, fallbackAttempted: false });
+        } else {
+          providerFailures.push({ provider: 'openai', status: openaiRes.status, reason: 'empty_response' });
+          logProviderFailure({ provider: 'openai', response: openaiRes, errorBody: { error: { code: 'EMPTY_RESPONSE', message: 'Empty provider response' } } });
+        }
+      } else {
+        const errorBody = await readProviderError(openaiRes);
+        const retryAfterSeconds = openaiRes.status === 429 ? recordProviderCooldown('openai', openaiRes, errorBody) : null;
+        providerFailures.push({ provider: 'openai', status: openaiRes.status, reason: openaiRes.status === 429 ? 'rate_limited' : 'http_error', ...(retryAfterSeconds === null ? {} : { retryAfterSeconds }) });
+        logProviderFailure({ provider: 'openai', response: openaiRes, errorBody, retryAfterSeconds, retryDueToTemp: retryDueToTemp || null });
+        logEvent({ provider: 'openai', eventType: 'http_failure', status: openaiRes.status, errorCategory: classifyProviderFailure('openai', openaiRes.status, sanitizeDiagnosticCode(errorBody?.error?.code || errorBody?.code || null), errorBody?.error?.message || ''), correlationId, durationMs: null, fallbackAttempted: false });
+      }
+    } catch (e) {
+      providerFailures.push({ provider: 'openai', status: null, reason: 'request_exception' });
+      if (isAbortError(e)) {
+        logProviderOutcome('openai', 'timeout', { reason: 'aborted' });
+        logEvent({ provider: 'openai', eventType: 'timeout', correlationId, durationMs: null, fallbackAttempted: false, errorCategory: 'timeout_aborted' });
+      } else {
+        logProviderFailure({ provider: 'openai', error: e });
+        logEvent({ provider: 'openai', eventType: 'http_failure', correlationId, durationMs: null, fallbackAttempted: false, errorCategory: 'UNKNOWN_ERROR' });
+      }
+    }
+  } else if (openaiKey) {
+    providerFailures.push({ provider: 'openai', status: 429, reason: 'rate_limited', retryAfterSeconds: openaiCooldownSeconds });
+    logProviderOutcome('openai', 'skipped', { reason: 'cooldown_active', retryAfterSeconds: openaiCooldownSeconds });
+  } else {
+    providerFailures.push({ provider: 'openai', status: null, reason: 'missing_api_key' });
+    logProviderOutcome('openai', 'skipped', { reason: 'missing_api_key' });
+  }
+
+  // --- Gemini (first fallback) ---
+  const geminiKey = process.env.GEMINI_API_KEY;
+  let geminiUsed = false;
   const geminiCooldownSeconds = geminiKey ? getProviderCooldownSeconds('gemini') : 0;
 
-  if (geminiKey && geminiCooldownSeconds === 0) {
+  if (geminiKey && geminiCooldownSeconds === 0 && !finalAnswer) {
     logProviderOutcome('gemini', 'attempted');
     logEvent({ provider: 'gemini', eventType: 'attempt_started', correlationId });
     try {
@@ -357,7 +432,7 @@ export async function POST(req) {
 
   // --- OpenRouter fallback (fixed free model; only after Gemini did not generate an answer) ---
   const openRouterModel = 'google/gemma-4-26b-a4b-it:free';
-  if (!geminiUsed) {
+  if (!finalAnswer) {
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     const openRouterCooldownSeconds = openRouterKey ? getProviderCooldownSeconds('openrouter') : 0;
     if (openRouterKey && openRouterCooldownSeconds === 0) {
@@ -437,6 +512,45 @@ export async function POST(req) {
 
   logEvent({ provider: 'system', eventType: 'final_result', correlationId, durationMs: null, fallbackAttempted: !geminiUsed ? true : false, status: finalAnswer ? 200 : 502 });
 
+  // --- Internal provider search fallback (Stage 1) ---
+  // When both AI providers fail and user asks about services/professionals,
+  // search registered Trust Connect providers via existing backend API.
+  if (!finalAnswer && serviceOrTradeTerms.test(lowerQ)) {
+    try {
+      const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+      const providerRes = await fetch(`${apiBase}/providers`, { signal: AbortSignal.timeout(8000) });
+      if (providerRes.ok) {
+        const providerData = await providerRes.json();
+        const all = Array.isArray(providerData.providers) ? providerData.providers : [];
+        // Filter by service match (safe, from real DB only)
+        const terms = ['plumber','electrician','cleaner','mechanic','carpenter','gardener','painter','security','hvac','appliance','tiling','masonry'];
+        const matched = all.filter(p => {
+          const text = `${p.businessName || ''} ${p.specialty || ''} ${Array.isArray(p.services) ? p.services.join(' ') : ''}`.toLowerCase();
+          return terms.some(t => text.includes(t));
+        });
+        const results = matched.length ? matched : all.slice(0, 5);
+        if (results.length > 0) {
+          const lines = results.map((p, i) => {
+            const name = p.businessName || 'Registered provider';
+            const spec = p.specialty || 'Service provider';
+            const loc = p.location || 'Zimbabwe';
+            const rate = typeof p.hourlyRate === 'number' ? `Rate: $${p.hourlyRate}` : '';
+            const bio = (p.bio || '').trim().substring(0, 120);
+            return `${i + 1}. ${name} — ${spec} (${loc})${rate ? '; ' + rate : ''}${bio ? ' — ' + bio : ''}`;
+          });
+          finalAnswer = `Available Trust Connect providers for your request:\n\n${lines.join('\n')}`;
+          logProviderOutcome('provider_fallback', 'succeeded', { count: results.length, source: 'database' });
+          logEvent({ provider: 'provider_fallback', eventType: 'success', correlationId, durationMs: null, fallbackAttempted: !geminiUsed ? true : false, status: 200 });
+        } else {
+          finalAnswer = 'No matching registered provider was found for your request. Try checking our Services page or contact support.';
+        }
+      }
+    } catch (e) {
+      // Silent fallback — provider API not reachable; maintain existing error behavior
+      logProviderOutcome('provider_fallback', 'skipped', { reason: 'api_unreachable' });
+    }
+  }
+
   if (!finalAnswer) {
     const bothUnavailable = providerFailures.some(f => f.provider === 'gemini') && providerFailures.some(f => f.provider === 'openrouter');
     return NextResponse.json({
@@ -447,5 +561,7 @@ export async function POST(req) {
     }, { status: bothUnavailable ? 503 : 502 });
   }
 
-  return NextResponse.json({ answer: finalAnswer, sources: finalSources, provider: geminiUsed ? 'gemini' : 'openrouter' }, { status: 200 });
+  // When using provider fallback, include sources only if Tavily contributed
+  const answerSources = (geminiUsed || !providerFailures.some(f => f.provider === 'gemini')) ? finalSources : [];
+  return NextResponse.json({ answer: finalAnswer.trim(), sources: answerSources, provider: openaiUsed ? 'openai' : (geminiUsed ? 'gemini' : 'provider_fallback') }, { status: 200 });
 }
