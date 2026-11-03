@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
 import { logEvent } from '../../../lib/diagnostics.js';
 
+// Vercel serverless execution budget — safe for all plans (max 300s; 30s fits Hobby/Pro)
+export const maxDuration = 30;
+
+const sanitizeTimeoutMs = (raw) => {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || n > 10000) return null;
+  return Math.min(Math.round(n), 10000);
+};
+
+// Request-wide time budget — initialized before any provider logic
+const BUDGET_MS = 30000;
+const RESERVE_MS = 3000;
+
 // Trust Connect domain context (concise, no invented claims)
 const TC_DOMAIN = `Trust Connect is a service-provider booking platform.
 Available service categories include: Electricians, Plumbers, Mechanics, Cleaners, Painters, Carpenters, Gardeners, Appliance Repair, Air Conditioning, Security Installation, CCTV, Solar Installation, IT Support, General Handyman, Pest Control.
@@ -171,6 +185,16 @@ export async function POST(req) {
   const correlationId = generateCorrelationId();
   logEvent({ provider: 'system', eventType: 'request_received', correlationId });
 
+  // Request-wide time budget initialized at start of every request
+  const startMs = Date.now();
+  const timeLeft = () => BUDGET_MS - (Date.now() - startMs);
+  const canAttempt = (needMs = 4000) => timeLeft() > needMs + RESERVE_MS;
+
+  // Real deadline controller for request-wide enforcement
+  const deadlineController = new AbortController();
+  const deadlineTimer = setTimeout(() => deadlineController.abort(), BUDGET_MS);
+
+  try {
   const question = body?.question;
   const messages = Array.isArray(body?.messages) ? body.messages : [];
   if (!question || typeof question !== 'string' || question.trim().length === 0) {
@@ -197,8 +221,27 @@ export async function POST(req) {
     return NextResponse.json({ answer: "Of course! Go ahead and ask me anything. I'm here to help.", sources: [], provider: 'local' }, { status: 200 });
   }
 
-  // --- Determine if web search (Tavily) needed ---
+  // Define terms for quick local answers and search logic
   const serviceOrTradeTerms = /\b(plumber|electrician|cleaner|painter|carpenter|gardener|pest|security|hvac|mechanic|car repair|appliance|tiling|masonry)\b/i;
+  const generalServiceOrPlatformTerms = /\b(services?|categories|category|trades?|platform|what can (you|i) (do|find|help)|how (can|does) (it|this|trust connect) work|about trust connect|help me do|available services)\b/i;
+
+  const directFAQTerms = /\b(what services?|what can I find|how do I book|how does this work|about trust connect|available services?|help me do|what can you do)\b/i;
+  const directTradeQuery = /\b(find|look for|search for|need)\b/i;
+
+  // --- Instant local responses for direct FAQs and simple service queries ---
+  const isDirectFAQ = directFAQTerms.test(lowerQ);
+  const isDirectServiceQuery = serviceOrTradeTerms.test(lowerQ) && (directTradeQuery.test(lowerQ) || /\b(in|at)\s+[a-z]+(falls|city|town|vicfalls)\b/i.test(lowerQ));
+  if (isDirectFAQ || (isDirectServiceQuery && !/\b(explain|compare|analysis|detailed|risks|security risks|online platforms)\b/i.test(lowerQ))) {
+    const isHelp = /\b(what can (you|i) (do|find|help)|how (can|does) (it|this|trust connect) work|about trust connect)\b/i.test(lowerQ);
+    const header = isHelp
+      ? "Trust Connect is a service-provider booking platform.\n\n"
+      : "Trust Connect connects you with verified local professionals.\n\n";
+    return NextResponse.json({
+      answer: header + "Available service categories include: Electricians, Plumbers, Mechanics, Cleaners, Painters, Carpenters, Gardeners, Appliance Repair, Air Conditioning, Security Installation, CCTV, Solar Installation, IT Support, General Handyman, Pest Control.\n\nCustomers find verified local providers, view ratings/reviews, and book services directly through our Services page.",
+      sources: [], provider: 'local'
+    }, { status: 200 });
+  }
+
   const currentInfoTerms = /\b(latest|recent|current|news|developments|updates)\b/i;
   const searchIntentWithService = /\b(find|search|discover|look for|browse)\b/i;
   const locationSearch = /\b(in|at|near)\s+[a-z]+(falls|city|town|region)\b/i;
@@ -233,12 +276,12 @@ export async function POST(req) {
       providerFailures.push({ provider: 'tavily', status: null, reason: 'missing_api_key' });
       logProviderOutcome('tavily', 'skipped', { reason: 'missing_api_key' });
       logEvent({ provider: 'tavily', eventType: 'skipped', correlationId, durationMs: null, fallbackAttempted: null });
-    } else try {
+    } else if (canAttempt(3000)) try {
       const tavilyRes = await fetch('https://api.tavily.com/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tavilyKey}` },
         body: JSON.stringify({ query: queryText, search_depth: 'advanced', include_answer: true, include_raw_content: false, max_results: 6 }),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.any([AbortSignal.timeout(3000), deadlineController.signal]),
       });
       if (tavilyRes.ok) {
         const data = await tavilyRes.json();
@@ -252,8 +295,12 @@ export async function POST(req) {
         });
       }
     } catch (e) {
-      providerFailures.push({ provider: 'tavily', status: null, reason: 'request_exception' });
-      logProviderOutcome('tavily', 'failed', { errorCategory: classifyProviderMessage(e?.message) });
+      providerFailures.push({ provider: 'tavily', status: null, reason: isAbortError(e) ? 'timeout_aborted' : 'request_exception' });
+      if (isAbortError(e)) {
+        logProviderOutcome('tavily', 'timeout', { reason: 'aborted' });
+      } else {
+        logProviderOutcome('tavily', 'failed', { errorCategory: classifyProviderMessage(e?.message) });
+      }
     }
   }
 
@@ -265,7 +312,8 @@ export async function POST(req) {
   let openaiUsed = false;
   const openaiCooldownSeconds = openaiKey ? getProviderCooldownSeconds('openai') : 0;
   const openaiModel = (process.env.OPENAI_MODEL || 'gpt-4o-mini').trim();
-  if (openaiKey && openaiCooldownSeconds === 0 && !finalAnswer) {
+  const openaiTimeoutMs = sanitizeTimeoutMs(process.env.OPENAI_TIMEOUT_MS) || 4000;
+  if (openaiKey && openaiCooldownSeconds === 0 && !finalAnswer && canAttempt(openaiTimeoutMs)) {
     logProviderOutcome('openai', 'attempted');
     logEvent({ provider: 'openai', eventType: 'attempt_started', correlationId });
     try {
@@ -283,11 +331,13 @@ export async function POST(req) {
             max_tokens: 1024,
             temperature: 0.7,
           }),
-          signal: AbortSignal.timeout(parseInt(process.env.OPENAI_TIMEOUT_MS || '30000', 10)),
+          signal: AbortSignal.any([AbortSignal.timeout(sanitizeTimeoutMs(process.env.OPENAI_TIMEOUT_MS) || 4000), deadlineController.signal]),
         });
         if (openaiRes.ok) break;
         const isTemporary = [503, 502, 504, 500].includes(openaiRes.status);
-        if (isTemporary && retryCount < maxRetries) {
+        const openaiNextMs = sanitizeTimeoutMs(process.env.OPENAI_TIMEOUT_MS) || 4000;
+        const retryNeedMs = openaiNextMs + 2000;
+        if (isTemporary && retryCount < maxRetries && canAttempt(retryNeedMs)) {
           retryCount += 1;
           retryDueToTemp = true;
           logProviderOutcome('openai', 'retry', { reason: 'temporary_failure', retryAttempt: retryCount });
@@ -317,7 +367,7 @@ export async function POST(req) {
         logEvent({ provider: 'openai', eventType: 'http_failure', status: openaiRes.status, errorCategory: classifyProviderFailure('openai', openaiRes.status, sanitizeDiagnosticCode(errorBody?.error?.code || errorBody?.code || null), errorBody?.error?.message || ''), correlationId, durationMs: null, fallbackAttempted: false });
       }
     } catch (e) {
-      providerFailures.push({ provider: 'openai', status: null, reason: 'request_exception' });
+      providerFailures.push({ provider: 'openai', status: null, reason: isAbortError(e) ? 'timeout_aborted' : 'request_exception' });
       if (isAbortError(e)) {
         logProviderOutcome('openai', 'timeout', { reason: 'aborted' });
         logEvent({ provider: 'openai', eventType: 'timeout', correlationId, durationMs: null, fallbackAttempted: false, errorCategory: 'timeout_aborted' });
@@ -339,7 +389,8 @@ export async function POST(req) {
   let geminiUsed = false;
   const geminiCooldownSeconds = geminiKey ? getProviderCooldownSeconds('gemini') : 0;
 
-  if (geminiKey && geminiCooldownSeconds === 0 && !finalAnswer) {
+  const geminiTimeoutMs = sanitizeTimeoutMs(process.env.GEMINI_TIMEOUT_MS) || 3000;
+  if (geminiKey && geminiCooldownSeconds === 0 && !finalAnswer && canAttempt(geminiTimeoutMs)) {
     logProviderOutcome('gemini', 'attempted');
     logEvent({ provider: 'gemini', eventType: 'attempt_started', correlationId });
     try {
@@ -358,7 +409,7 @@ export async function POST(req) {
         promptParts.push({ text: `User asks: ${question}\nAnswer clearly.` });
       }
       let retryCount = 0;
-      const maxRetries = 1; // strict limit: one retry for temporary failures
+      const maxRetries = 0; // disabled: serverless budget requires single attempt
       let geminiRes = null;
       let retryDueToTemp = false;
       while (retryCount <= maxRetries) {
@@ -366,11 +417,11 @@ export async function POST(req) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
           body: JSON.stringify({ contents: [{ role: 'user', parts: promptParts }], generationConfig: { temperature: 0.7, maxOutputTokens: 1024 } }),
-          signal: AbortSignal.timeout(parseInt(process.env.GEMINI_TIMEOUT_MS || '90000', 10)),
+          signal: AbortSignal.any([AbortSignal.timeout(sanitizeTimeoutMs(process.env.GEMINI_TIMEOUT_MS) || 3000), deadlineController.signal]),
         });
         if (geminiRes.ok) break;
         const isTemporary = [503, 502, 504, 500].includes(geminiRes.status);
-        if (isTemporary && retryCount < maxRetries) {
+        if (isTemporary && retryCount < maxRetries && canAttempt(6000)) {
           retryCount += 1;
           retryDueToTemp = true;
           logProviderOutcome('gemini', 'retry', { reason: 'temporary_failure', retryAttempt: retryCount });
@@ -413,7 +464,7 @@ export async function POST(req) {
         logEvent({ provider: 'gemini', eventType: 'http_failure', status: geminiRes.status, errorCategory: classifyProviderFailure('gemini', geminiRes.status, sanitizeDiagnosticCode(errorBody?.error?.code || errorBody?.code || null), errorBody?.error?.message || ''), correlationId, durationMs: null, fallbackAttempted: false });
       }
     } catch (e) {
-      providerFailures.push({ provider: 'gemini', status: null, reason: 'request_exception' });
+      providerFailures.push({ provider: 'gemini', status: null, reason: isAbortError(e) ? 'timeout_aborted' : 'request_exception' });
       if (isAbortError(e)) {
         logProviderOutcome('gemini', 'timeout', { reason: 'aborted' });
         logEvent({ provider: 'gemini', eventType: 'timeout', correlationId, durationMs: null, fallbackAttempted: false, errorCategory: 'timeout_aborted' });
@@ -431,8 +482,10 @@ export async function POST(req) {
   }
 
   // --- OpenRouter fallback (fixed free model; only after Gemini did not generate an answer) ---
-  const openRouterModel = 'google/gemma-4-26b-a4b-it:free';
-  if (!finalAnswer) {
+  const configuredOpenRouterModel = process.env.OPENROUTER_MODEL?.trim();
+  const openRouterModel = configuredOpenRouterModel || 'google/gemma-4-26b-a4b-it:free';
+  const openRouterTimeoutMs = sanitizeTimeoutMs(process.env.OPENROUTER_TIMEOUT_MS) || 3000;
+  if (!finalAnswer && canAttempt(openRouterTimeoutMs)) {
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     const openRouterCooldownSeconds = openRouterKey ? getProviderCooldownSeconds('openrouter') : 0;
     if (openRouterKey && openRouterCooldownSeconds === 0) {
@@ -446,7 +499,8 @@ export async function POST(req) {
         const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openRouterKey}` },
-          body: JSON.stringify({ model: openRouterModel.trim(), messages: [{ role: 'user', content: orPrompt }], max_tokens: 1024, temperature: 0.7 }),
+          body: JSON.stringify({ model: openRouterModel, messages: [{ role: 'user', content: orPrompt }], max_tokens: 1024, temperature: 0.7 }),
+          signal: AbortSignal.any([AbortSignal.timeout(sanitizeTimeoutMs(process.env.OPENROUTER_TIMEOUT_MS) || 3000), deadlineController.signal]),
         });
         if (orRes.ok) {
           const orData = await orRes.json();
@@ -486,7 +540,7 @@ export async function POST(req) {
           logEvent({ provider: 'openrouter', eventType: 'http_failure', status: orRes.status, errorCategory: classifyProviderFailure('openrouter', orRes.status, sanitizeDiagnosticCode(errorBody?.error?.code || errorBody?.code || null), errorBody?.error?.message || ''), correlationId, durationMs: null, fallbackAttempted: true });
         }
       } catch (e) {
-        providerFailures.push({ provider: 'openrouter', status: null, reason: 'request_exception' });
+        providerFailures.push({ provider: 'openrouter', status: null, reason: isAbortError(e) ? 'timeout_aborted' : 'request_exception' });
         if (isAbortError(e)) {
           logProviderOutcome('openrouter', 'timeout', { reason: 'aborted' });
           logEvent({ provider: 'openrouter', eventType: 'timeout', correlationId, durationMs: null, fallbackAttempted: true });
@@ -515,10 +569,10 @@ export async function POST(req) {
   // --- Internal provider search fallback (Stage 1) ---
   // When both AI providers fail and user asks about services/professionals,
   // search registered Trust Connect providers via existing backend API.
-  if (!finalAnswer && serviceOrTradeTerms.test(lowerQ)) {
+  if (!finalAnswer && serviceOrTradeTerms.test(lowerQ) && canAttempt(3000)) {
     try {
       const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
-      const providerRes = await fetch(`${apiBase}/providers`, { signal: AbortSignal.timeout(8000) });
+      const providerRes = await fetch(`${apiBase}/providers`, { signal: AbortSignal.any([AbortSignal.timeout(3000), deadlineController.signal]) });
       if (providerRes.ok) {
         const providerData = await providerRes.json();
         const all = Array.isArray(providerData.providers) ? providerData.providers : [];
@@ -546,22 +600,64 @@ export async function POST(req) {
         }
       }
     } catch (e) {
-      // Silent fallback — provider API not reachable; maintain existing error behavior
+      // Provider API unreachable; provide deterministic local service response when user asks about trades/services
       logProviderOutcome('provider_fallback', 'skipped', { reason: 'api_unreachable' });
+      if (serviceOrTradeTerms.test(lowerQ)) {
+        finalAnswer = `Trust Connect connects you with verified local professionals including electricians, plumbers, mechanics, cleaners, painters, gardeners, appliance repair specialists, HVAC technicians, security installers, and general handymen. ` +
+          `Browse available services and compare reviews through our Services page, or ask for more details about a specific trade.`;
+      }
     }
   }
 
+  // When budget is exhausted before provider lookup, still return service-category answer
+  if (!finalAnswer && serviceOrTradeTerms.test(lowerQ) && !canAttempt(3000)) {
+    finalAnswer = `Trust Connect connects you with verified local professionals including electricians, plumbers, mechanics, cleaners, painters, gardeners, appliance repair specialists, HVAC technicians, security installers, and general handymen. ` +
+      `Browse available services and compare reviews through our Services page, or ask for more details about a specific trade.`;
+  }
+
+  // Deterministic fallback for general service / category / platform questions when AI unavailable
+  if (!finalAnswer && generalServiceOrPlatformTerms.test(lowerQ)) {
+    const isHelpQuery = /\b(what can you (help|do)|how (can|does) (it|this|trust connect) work)\b/i.test(lowerQ);
+    const greetingPrefix = /^(hello|hi|hie|hey|greetings|good morning|good afternoon|good evening)\b/i.test(lowerQ)
+      ? "Hello! "
+      : "";
+    const header = isHelpQuery
+      ? `${greetingPrefix}I can help you find verified professionals, explore service categories, and learn how to book services on Trust Connect.\n\n`
+      : `${greetingPrefix}Trust Connect is a service-provider booking platform where you can discover, review, and book verified local professionals.\n\n`;
+
+    finalAnswer = `${header}Available service categories include:\n` +
+      `• Electricians, Plumbers, Mechanics, Cleaners, Painters\n` +
+      `• Carpenters, Gardeners, Appliance Repair, Air Conditioning (HVAC)\n` +
+      `• Security Installation, CCTV, Solar Installation, IT Support\n` +
+      `• General Handyman, Pest Control\n\n` +
+      `You can browse providers by specialty, compare reviews, and book services directly through our Services page.`;
+    logProviderOutcome('platform_fallback', 'succeeded', { source: 'tc_domain' });
+    logEvent({ provider: 'platform_fallback', eventType: 'success', correlationId, durationMs: null, fallbackAttempted: !geminiUsed ? true : false, status: 200 });
+  }
+
   if (!finalAnswer) {
-    const bothUnavailable = providerFailures.some(f => f.provider === 'gemini') && providerFailures.some(f => f.provider === 'openrouter');
+    const failures = providerFailures || [];
+    const safeFailures = failures.map(f => ({
+      provider: f.provider,
+      status: f.status || null,
+      reason: f.reason || f.errorCategory || 'unavailable'
+    }));
+    const temporaryReasons = ['rate_limited', 'provider_at_capacity', 'timeout_aborted', 'service_unavailable'];
+    const temporaryStatuses = [429, 503, 502, 504, 500];
+    const isTemporaryFailure = (f) => temporaryReasons.includes(f.reason) || temporaryStatuses.includes(f.status);
+    const allTemporary = failures.length > 0 && failures.every(isTemporaryFailure);
+    const allUnavailable = ['openai', 'gemini', 'openrouter'].every(p => failures.some(f => f.provider === p));
+    console.error(`[CHAT_ERROR] Fallback exhausted: ${JSON.stringify(safeFailures)}`);
     return NextResponse.json({
-      error: bothUnavailable
-        ? 'Both AI providers are temporarily busy. Please try again later.'
-        : 'The AI assistant is temporarily unavailable. Please try again later.',
+      error: (allTemporary && allUnavailable)
+        ? 'All AI providers are temporarily busy. Please try again later.'
+        : 'The AI assistant is temporarily unavailable. Please check your configuration or try again later.',
       provider: null,
-    }, { status: bothUnavailable ? 503 : 502 });
+    }, { status: (allTemporary && allUnavailable) ? 503 : 502 });
   }
 
   // When using provider fallback, include sources only if Tavily contributed
   const answerSources = (geminiUsed || !providerFailures.some(f => f.provider === 'gemini')) ? finalSources : [];
   return NextResponse.json({ answer: finalAnswer.trim(), sources: answerSources, provider: openaiUsed ? 'openai' : (geminiUsed ? 'gemini' : 'provider_fallback') }, { status: 200 });
+  } finally { clearTimeout(deadlineTimer); }
 }
