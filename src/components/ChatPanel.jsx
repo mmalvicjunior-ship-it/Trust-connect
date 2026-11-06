@@ -1,8 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 // --- Safe greeting detection ---
@@ -26,69 +24,24 @@ const isGreeting = (text) => {
   return /^(hello|hi|hie|hey|heyy|greetings|howdy|good morning|good afternoon|good evening|nice to meet you|what's up|how's it going|how are you(?: doing)?(?: today)?)[.!?]*$/i.test(lower);
 };
 
-// --- Chat slot context ---
-// A single ChatPanel instance lives in the root layout. Pages can register a
-// DOM node with `useChatHeroSlot()` to have the same live chat rendered there
-// (e.g. the homepage hero) instead of the floating launcher.
-const ChatContext = createContext(null);
-
-export function useChatHeroSlot() {
-  const ctx = useContext(ChatContext);
-  const register = ctx?.registerSlot;
-  return useCallback((node) => {
-    if (register) register(node);
-  }, [register]);
-}
+// Single floating ChatPanel instance.
+// The panel is hidden by default and opens above the page via its launcher;
+// the conversation state lives here so history survives close/reopen.
 
 export default function ChatPanel({ children }) {
-  const pathname = usePathname();
-  const isHome = pathname === '/';
   const [open, setOpen] = useState(false);
-  const [slot, setSlot] = useState(null);
-  const [homeSlotMissing, setHomeSlotMissing] = useState(false);
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Hello! I\'m the Trust Connect AI assistant. I can help you find verified professionals, explain our booking process, answer questions about the platform, or assist with general topics. What would you like to talk about?' },
   ]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const messagesEndRef = useRef(null);
+  const chatBodyRef = useRef(null);
 
-  const registerSlot = useCallback((node) => setSlot(node), []);
-  const chatContextValue = useMemo(() => ({ registerSlot }), [registerSlot]);
-
-  // Safety net: if a page ever fails to register its hero slot, fall back to
-  // the floating launcher after a short delay so chat is never unreachable.
+  // Scroll ONLY the internal message list — never the main document.
   useEffect(() => {
-    if (!isHome || slot) {
-      setHomeSlotMissing(false);
-      return;
-    }
-    const timer = setTimeout(() => setHomeSlotMissing(true), 1200);
-    return () => clearTimeout(timer);
-  }, [isHome, slot]);
-
-  const showFloating = !slot && (!isHome || homeSlotMissing);
-
-  useEffect(() => {
-    const handler = () => {
-      if (slot) {
-        slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        setOpen(true);
-      }
-    };
-    window.addEventListener('open-ai-chat', handler);
-    return () => window.removeEventListener('open-ai-chat', handler);
-  }, [slot]);
-
-  // When the inline slot appears, dismiss any floating panel.
-  useEffect(() => {
-    if (slot) setOpen(false);
-  }, [slot]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const body = chatBodyRef.current;
+    if (body) body.scrollTop = body.scrollHeight;
+  }, [messages, open]);
 
   const respondLocally = (text) => {
     console.log('[CHAT_PROV] Provider: local');
@@ -168,14 +121,10 @@ export default function ChatPanel({ children }) {
             <p>Services, bookings &amp; general questions</p>
           </div>
         </div>
-        {slot ? (
-          <span className="chat-live"><i className="fa-solid fa-circle" aria-hidden="true" /> Live</span>
-        ) : (
-          <button className="chat-close" onClick={() => setOpen(false)} aria-label="Close chat"><i className="fa-solid fa-xmark" /></button>
-        )}
+        <button className="chat-close" onClick={() => setOpen(false)} aria-label="Close chat"><i className="fa-solid fa-xmark" /></button>
       </div>
 
-      <div className="chat-body" role="log" aria-live="polite" aria-label="Chat conversation">
+      <div className="chat-body" ref={chatBodyRef} role="log" aria-live="polite" aria-label="Chat conversation">
         {messages.map((msg, i) => (
           <div key={i} className={`chat-msg chat-${msg.role}`}>
             <div className="chat-bubble">
@@ -207,7 +156,7 @@ export default function ChatPanel({ children }) {
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
+        <div />
       </div>
 
       <div className="chat-footer">
@@ -233,11 +182,11 @@ export default function ChatPanel({ children }) {
   );
 
   return (
-    <ChatContext.Provider value={chatContextValue}>
+    <>
       {children}
 
-      {/* Floating launcher — only when the hero slot is not registered */}
-      {showFloating && (
+      {/* Floating launcher — single instance, hidden panel by default */}
+      {!open && (
         <button
           onClick={() => setOpen(true)}
           className="chat-float-btn"
@@ -248,20 +197,12 @@ export default function ChatPanel({ children }) {
         </button>
       )}
 
-      {/* Floating panel */}
-      {showFloating && (
-        <div className={`chat-panel ${open ? 'chat-open' : ''}`} role="dialog" aria-modal="true" aria-label="AI Search Chat">
+      {/* Floating panel — overlays the page, does not resize it */}
+      {open && (
+        <div className="chat-panel chat-open" role="dialog" aria-modal="true" aria-label="AI Search Chat">
           {panel}
         </div>
       )}
-
-      {/* Inline hero panel — same instance, same state, rendered into the page slot */}
-      {slot && createPortal(
-        <div className="chat-hero-panel" role="region" aria-label="Trust Connect AI assistant">
-          {panel}
-        </div>,
-        slot
-      )}
-    </ChatContext.Provider>
+    </>
   );
 }

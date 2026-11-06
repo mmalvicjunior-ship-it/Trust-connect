@@ -225,12 +225,15 @@ export async function POST(req) {
   const isDirectFAQ = directFAQTerms.test(lowerQ);
   const isDirectServiceQuery = serviceOrTradeTerms.test(lowerQ) && (directTradeQuery.test(lowerQ) || /\b(in|at)\s+[a-z]+(falls|city|town|vicfalls)\b/i.test(lowerQ));
   if (isDirectFAQ || (isDirectServiceQuery && !/\b(explain|compare|analysis|detailed|risks|security risks|online platforms)\b/i.test(lowerQ))) {
-    const isHelp = /\b(what can (you|i) (do|find|help)|how (can|does) (it|this|trust connect) work|about trust connect)\b/i.test(lowerQ);
-    const header = isHelp
-      ? "Trust Connect is a service-provider booking platform.\n\n"
-      : "Trust Connect connects you with verified local professionals.\n\n";
+    const isHelp = /\b(what can (you|i) (do|find|help)|how (can|does) (it|this|trust connect) work|how (do|can) (i|you) use|about trust connect)\b/i.test(lowerQ);
+    if (isHelp) {
+      return NextResponse.json({
+        answer: "Trust Connect is a service-provider booking platform. Here is how to use it as a customer:\n\n1. Create an account or sign in.\n2. Browse service categories (Electricians, Plumbers, Mechanics, Cleaners, Painters, Carpenters, Gardeners, Appliance Repair, Air Conditioning, Security Installation, CCTV, Solar Installation, IT Support, General Handyman, Pest Control).\n3. Find a provider in the category you need.\n4. Review provider details and ratings/reviews.\n5. Submit a booking with date, time, location, job description and amount.\n6. Wait for the provider's response (your booking starts as Pending and is confirmed by the provider).\n7. Track your booking status in the platform.\n\nYou can browse providers by specialty, compare reviews, and book services directly through our Services and Booking pages.",
+        sources: [], provider: 'local'
+      }, { status: 200 });
+    }
     return NextResponse.json({
-      answer: header + "Available service categories include: Electricians, Plumbers, Mechanics, Cleaners, Painters, Carpenters, Gardeners, Appliance Repair, Air Conditioning, Security Installation, CCTV, Solar Installation, IT Support, General Handyman, Pest Control.\n\nCustomers find verified local providers, view ratings/reviews, and book services directly through our Services page.",
+      answer: "Trust Connect connects you with verified local professionals.\n\nAvailable service categories include: Electricians, Plumbers, Mechanics, Cleaners, Painters, Carpenters, Gardeners, Appliance Repair, Air Conditioning, Security Installation, CCTV, Solar Installation, IT Support, General Handyman, Pest Control.\n\nCustomers find verified local providers, view ratings/reviews, and book services directly through our Services page.",
       sources: [], provider: 'local'
     }, { status: 200 });
   }

@@ -7,10 +7,8 @@ import Footer from '@/components/Footer';
 import { SERVICES } from '@/data/data';
 import { api } from '@/lib/api';
 import SectionTitle from '@/components/SectionTitle';
-import { useChatHeroSlot } from '@/components/ChatPanel';
 
 export default function Home() {
-  const chatSlotRef = useChatHeroSlot();
   const [providers, setProviders] = useState([]);
   const [providersLoading, setProvidersLoading] = useState(true);
   const [providersError, setProvidersError] = useState('');
@@ -179,7 +177,6 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="hero-chat-slot" ref={chatSlotRef} />
           </div>
         </div>
       </header>

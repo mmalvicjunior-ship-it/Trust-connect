@@ -40,6 +40,17 @@ for (const q of [
   assert(/service-provider booking platform|verified local professionals/i.test(body.answer), `TC local answer for: ${q}`);
 }
 
+// 4. Platform-usage phrasings return the 7-step customer journey locally
+{
+  const before = geminiCalls;
+  const { status, body } = await post('How do I use this application?', []);
+  assert(status === 200 && body.provider === 'local', 'platform-usage answered locally');
+  assert(geminiCalls === before, 'Gemini NOT called for platform-usage');
+  for (const step of ['Create an account or sign in', 'Browse service categories', 'Find a provider', 'Review provider details', 'Submit a booking', "provider's response", 'Track your booking status']) {
+    assert(body.answer.includes(step), 'journey step present: ' + step);
+  }
+}
+
 // 5. Existing plumber question still answered locally
 {
   const before = geminiCalls;

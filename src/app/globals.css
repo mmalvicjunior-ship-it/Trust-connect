@@ -7473,6 +7473,40 @@ p, li, a { overflow-wrap: break-word; }
   [data-aos] { opacity: 1 !important; transform: none !important; }
 }
 
+/* ---- Floating chatbot: launcher bottom-right, panel overlays page ---- */
+.chat-float-btn {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: 24px;
+  z-index: 2001;
+}
+.chat-panel {
+  position: fixed;
+  right: 24px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 2002;
+  max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - 120px);
+}
+.chat-body { overflow-y: auto; }
+
+/* ---- Small screens: bottom-sheet style, no horizontal overflow ---- */
+@media (max-width: 640px) {
+  .chat-float-btn {
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .chat-panel {
+    left: 10px;
+    right: 10px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    height: min(560px, calc(100dvh - 110px));
+    max-height: calc(100dvh - 110px);
+  }
+  .chat-body { min-height: 0; }
+}
+
 /* ---- Small screens: comfortable type, no horizontal scroll ---- */
 @media (max-width: 640px) {
   .hero-copy p.lead { font-size: 17px; }
