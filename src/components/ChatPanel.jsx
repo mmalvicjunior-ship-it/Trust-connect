@@ -43,6 +43,15 @@ export default function ChatPanel({ children }) {
     if (body) body.scrollTop = body.scrollHeight;
   }, [messages, open]);
 
+  // Open the floating panel when the Navbar "AI Search" button is clicked.
+  // The Navbar dispatches a window-level 'open-ai-chat' event; this listener
+  // is the single ChatPanel instance's handler (no duplicate chat created).
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener('open-ai-chat', handler);
+    return () => window.removeEventListener('open-ai-chat', handler);
+  }, []);
+
   const respondLocally = (text) => {
     console.log('[CHAT_PROV] Provider: local');
     setMessages((m) => [...m, { role: 'assistant', text, provider: 'local' }]);
