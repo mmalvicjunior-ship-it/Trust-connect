@@ -58,7 +58,7 @@ export default function Footer() {
           <p><i className="fas fa-envelope"></i> info@trustconnect.com</p>
           <p><i className="fas fa-phone"></i> +263 77 123 4567</p>
           <p><i className="fas fa-map-marker-alt"></i> 123 chinotimba Rawu, Victoria Falls, Zimbabwe</p>
-          <Link href="/contact" className="btn btn-accent btn-sm"><i className="fas fa-paper-plane"></i> Get In Touch</Link>
+          <Link href="/contact" className="btn btn-accent btn-sm"><i className="fas fa-paper-plane" aria-hidden="true"></i> Get In Touch</Link>
         </div>
       </div>
       <div className="footer-bottom">&copy; 2026 Trust Connect. All Rights Reserved.</div>

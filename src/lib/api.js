@@ -40,6 +40,24 @@ async function request(path, options = {}) {
   return data;
 }
 
+// Tiny in-memory cache for public, non-user-specific GET responses.
+// Keeps navigation snappy without serving stale private data: only public
+// marketplace/settings endpoints use it, TTLs are short, and failures are
+// never cached so retry buttons keep working.
+const publicCache = new Map();
+
+function cachedGet(key, ttlMs, fetcher) {
+  const hit = publicCache.get(key);
+  const now = Date.now();
+  if (hit && now - hit.at < ttlMs) {
+    return Promise.resolve(hit.data);
+  }
+  return fetcher().then((data) => {
+    publicCache.set(key, { data, at: Date.now() });
+    return data;
+  });
+}
+
 export const api = {
   register: (body) => request("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   login: (body) => request("/auth/login", { method: "POST", body: JSON.stringify(body) }),
@@ -47,6 +65,7 @@ export const api = {
   logout: () => request("/auth/logout", { method: "POST" }),
   googleLogin: (credential) => request("/auth/google", { method: "POST", body: JSON.stringify({ credential }) }),
   me: () => request("/auth/me"),
+  updateMe: (body) => request("/auth/me", { method: "PATCH", body: JSON.stringify(body) }),
 
   createBooking: (body) => request("/bookings", { method: "POST", body: JSON.stringify(body) }),
   getBookings: () => request("/bookings"),
@@ -55,7 +74,9 @@ export const api = {
     request(`/bookings/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   getProviderBookings: () => request("/bookings/provider"),
 
-  getProviders: () => request("/providers"),
+  // Public marketplace directory — short 30s cache avoids refetching on every
+  // navigation while keeping listings fresh. Errors are never cached.
+  getProviders: () => cachedGet("providers", 30 * 1000, () => request("/providers")),
   getProvider: (id) => request(`/providers/${id}`),
   createProvider: (body) => request("/providers", { method: "POST", body: JSON.stringify(body) }),
   getMyProviderProfile: () => request("/providers/me"),
@@ -68,7 +89,8 @@ export const api = {
   createReview: (body) => request("/reviews", { method: "POST", body: JSON.stringify(body) }),
   getProviderReviews: (id) => request(`/reviews/provider/${id}`),
 
-  getPlatformFee: () => request("/settings/platform-fee"),
+  // Public platform settings — short 60s cache.
+  getPlatformFee: () => cachedGet("platform-fee", 60 * 1000, () => request("/settings/platform-fee")),
   getDashboard: () => request("/dashboard"),
 
   getNotifications: () => request("/notifications"),

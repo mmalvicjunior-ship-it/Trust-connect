@@ -83,13 +83,13 @@ export default function Contact() {
             </div>
           </div>
           <div className="contact-form-card" data-aos="fade-left">
-            <h2><i className="fas fa-paper-plane"></i> Send Us a Message</h2>
+            <h2><i className="fas fa-paper-plane" aria-hidden="true"></i> Send Us a Message</h2>
             <form id="contact-form" onSubmit={handleSubmit}>
-              <div className="form-group"><label>Your Name</label><input type="text" name="name" placeholder="Enter your name" required /></div>
-              <div className="form-group"><label>Email Address</label><input type="email" name="email" placeholder="example@email.com" required /></div>
-              <div className="form-group"><label>Subject</label><input type="text" name="subject" placeholder="What is this about?" required /></div>
-              <div className="form-group"><label>Message</label><textarea name="message" rows="5" placeholder="Tell us how we can help..." required></textarea></div>
-              <button type="submit" className="btn btn-primary btn-lg submit-btn" disabled={submitting}><i className="fas fa-paper-plane"></i> {submitting ? 'Sending...' : 'Send Message'}</button>
+              <div className="form-group"><label htmlFor="contact-name">Your Name</label><input id="contact-name" type="text" name="name" placeholder="Enter your name" autoComplete="name" required /></div>
+              <div className="form-group"><label htmlFor="contact-email">Email Address</label><input id="contact-email" type="email" name="email" placeholder="example@email.com" autoComplete="email" required /></div>
+              <div className="form-group"><label htmlFor="contact-subject">Subject</label><input id="contact-subject" type="text" name="subject" placeholder="What is this about?" required /></div>
+              <div className="form-group"><label htmlFor="contact-message">Message</label><textarea id="contact-message" name="message" rows="5" placeholder="Tell us how we can help..." required></textarea></div>
+              <button type="submit" className="btn btn-primary btn-lg submit-btn" disabled={submitting}><i className="fas fa-paper-plane" aria-hidden="true"></i> {submitting ? 'Sending...' : 'Send Message'}</button>
             </form>
           </div>
         </div>

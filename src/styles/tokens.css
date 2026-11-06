@@ -1,0 +1,78 @@
+/* ============================================================
+   TRUST CONNECT — ZARION-INSPIRED DESIGN TOKENS
+   Based on Zarion's Webflow design system:
+   - Instrument Sans (primary), Space Mono (secondary)
+   - Off-white bg (#fff), near-black text (#191814)
+   - Blue primary (#003cff), cyan accents, bordered cards
+   ============================================================ */
+
+:root {
+  /* --- Typography --- */
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- Color Palette --- */
+  --bg: #e8edf5;
+  --bg-alt: #f1f4f8;
+  --surface: #ffffff;
+  --bg-dark: #0d0d0d;
+  --text: #172033;
+  --text-muted: #4f5b6e;
+  --text-faint: #5b6472;
+  --border: #d9e1ec;
+  --border-light: #f0f0f0;
+  --white: #ffffff;
+  --text-2: #4f5b6e;
+  --navy: #0d0d0d;
+  --navy-2: #161616;
+
+  /* --- Brand Accent --- */
+  --primary: #003cff;
+  --primary-dark: #002dd6;
+  --primary-hover: #002dd6;
+  --primary-active: #0028b3;
+  --secondary: #003cff;
+  --teal: #00b8a9;
+  --accent-cyan: #00b8a9;
+  --accent-teal: #00b8a9;
+
+  /* --- Semantic Tones (flat, Zarion-style) --- */
+  --tone-blue: #003cff;
+  --tone-blue-bg: #eaf0ff;
+  --tone-green: #16a34a;
+  --tone-green-bg: #f0fdf4;
+  --tone-amber: #d97706;
+  --tone-amber-bg: #fffbeb;
+  --tone-red: #dc2626;
+  --tone-red-bg: #fef2f2;
+  --tone-slate: #334155;
+  --tone-slate-bg: #f1f5f9;
+
+  /* --- Semantic status --- */
+  --success: #16a34a;
+  --error: #dc2626;
+
+  /* --- Gradients (flat Zarion replacements) --- */
+  --grad-primary: linear-gradient(135deg, #003cff 0%, #003cff 100%);
+  --grad-navy: linear-gradient(145deg, #0d0d0d 0%, #161616 100%);
+  --grad-blue-teal: linear-gradient(135deg, #003cff 0%, #00b8a9 100%);
+  --grad-blue: linear-gradient(135deg, #003cff 0%, #003cff 100%);
+  --grad-navy-flat: linear-gradient(145deg, #0d0d0d 0%, #161616 100%);
+
+  /* --- Shadows (flat, minimal) --- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-blue: 0 16px 40px -12px rgba(0, 60, 255, 0.35);
+
+  /* --- Radii --- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+
+  /* --- Layout --- */
+  --container: 1280px;
+}

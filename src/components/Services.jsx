@@ -39,13 +39,13 @@ export default function Services() {
       <section className="services-detail">
         {SERVICES_DETAIL.map((s, i) => (
           <div key={i} className="service-detail-card" data-aos="fade-up" data-aos-delay={i * 80}>
-            <div className="icon"><i className={s.icon}></i></div>
+            <div className="icon" aria-hidden="true"><i className={s.icon}></i></div>
             <div>
               <h3>{s.title}</h3>
               <p>{s.desc}</p>
               <ul>
                 {s.items.map((item, j) => (
-                  <li key={j}><i className="fas fa-check"></i> {item}</li>
+                  <li key={j}><i className="fas fa-check" aria-hidden="true"></i> {item}</li>
                 ))}
               </ul>
               <Link href={`/booking?service=${encodeURIComponent(s.title)}`} className="btn btn-primary">{s.btnText}</Link>

@@ -9,7 +9,7 @@ export default function HomeFooter() {
         <div className="foot-grid">
           <div className="foot-brand">
             <Link href="/" className="nav-logo">
-              <svg className="mark" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="11" fill="url(#fGrad)"/><path d="M20 9L28 13V20C28 25 24.5 28.8 20 31C15.5 28.8 12 25 12 20V13L20 9Z" stroke="white" strokeWidth="2" strokeLinejoin="round"/><path d="M16.2 19.6L18.7 22.2L23.8 16.8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><defs><linearGradient id="fGrad" x1="0" y1="0" x2="40" y2="40"><stop stopColor="#0057D9"/><stop offset="1" stopColor="#00B8A9"/></linearGradient></defs></svg>
+              <svg className="mark" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="11" fill="url(#fGrad)"/><path d="M20 9L28 13V20C28 25 24.5 28.8 20 31C15.5 28.8 12 25 12 20V13L20 9Z" stroke="white" strokeWidth="2" strokeLinejoin="round"/><path d="M16.2 19.6L18.7 22.2L23.8 16.8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><defs><linearGradient id="fGrad" x1="0" y1="0" x2="40" y2="40"><stop stopColor="#003cff"/><stop offset="1" stopColor="#00b8a9"/></linearGradient></defs></svg>
               Trust Connect
             </Link>
             <p>Making it simple, safe and fast for anyone to hire trusted professionals.</p>

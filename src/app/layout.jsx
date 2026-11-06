@@ -1,4 +1,5 @@
 import './globals.css';
+import '../styles/tokens.css';
 import { AuthProvider } from '@/context/AuthContext';
 import ChatPanel from '@/components/ChatPanel';
 
@@ -25,7 +26,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: '#0057D9',
+  themeColor: '#003cff',
 };
 
 export default function RootLayout({ children }) {
@@ -34,12 +35,16 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
-        <ChatPanel />
+        <AuthProvider>
+          <ChatPanel>{children}</ChatPanel>
+        </AuthProvider>
       </body>
     </html>
   );
